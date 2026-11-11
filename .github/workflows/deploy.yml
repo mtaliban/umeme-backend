@@ -87,23 +87,28 @@ jobs:
 
             cd /opt/company-website
 
-            # Write .env file from secrets
-            cat > deploy/.env <<EOF
-            GITHUB_REPOSITORY_OWNER=$GH_OWNER
-            IMAGE_TAG=$IMAGE_TAG
-            MONGO_ROOT_USERNAME=$MONGO_ROOT_USERNAME
-            MONGO_ROOT_PASSWORD=$MONGO_ROOT_PASSWORD
-            JWT_SECRET=$JWT_SECRET
-            ADMIN_EMAIL=$ADMIN_EMAIL
-            ADMIN_PASSWORD=$ADMIN_PASSWORD
-            SITE_URL=$SITE_URL
-            REVALIDATE_SECRET=$REVALIDATE_SECRET
-            FRONTEND_ORIGIN=$FRONTEND_ORIGIN
-            EOF
+            # Write .env file from secrets (using printf to avoid heredoc indentation issues)
+            printf 'GITHUB_REPOSITORY_OWNER=%s\n' "$GH_OWNER" > deploy/.env
+            printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG" >> deploy/.env
+            printf 'MONGO_ROOT_USERNAME=%s\n' "$MONGO_ROOT_USERNAME" >> deploy/.env
+            printf 'MONGO_ROOT_PASSWORD=%s\n' "$MONGO_ROOT_PASSWORD" >> deploy/.env
+            printf 'JWT_SECRET=%s\n' "$JWT_SECRET" >> deploy/.env
+            printf 'ADMIN_EMAIL=%s\n' "$ADMIN_EMAIL" >> deploy/.env
+            printf 'ADMIN_PASSWORD=%s\n' "$ADMIN_PASSWORD" >> deploy/.env
+            printf 'SITE_URL=%s\n' "$SITE_URL" >> deploy/.env
+            printf 'REVALIDATE_SECRET=%s\n' "$REVALIDATE_SECRET" >> deploy/.env
+            printf 'FRONTEND_ORIGIN=%s\n' "$FRONTEND_ORIGIN" >> deploy/.env
 
             # Pull new image and restart backend + caddy
             sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env pull backend
-            sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d backend caddy mongo
+            sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d backend caddy mongo || true
+
+            # Show backend logs if unhealthy
+            sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env logs --tail=50 backend
+
+            # Fail if backend is not running
+            sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env ps backend | grep -q "running\|Up"
+
             sudo docker system prune -f --filter "until=24h"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
