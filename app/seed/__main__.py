@@ -118,36 +118,36 @@ async def seed_settings() -> None:
         return
     logo_url = _pick("logo", 400, 120)
     s = SiteSettings(
-        company_name="Volt & Water Engineering Ltd",
-        slogan=_t("Powering Lives, Sustaining Water", "Kuendesha Maisha, Kudumisha Maji"),
-        logo={"url": logo_url, "alt": _t("Volt & Water Engineering"), "width": 400, "height": 120,
+        company_name="Kilele Power & Water Engineering Ltd",
+        slogan=_t("Electricity and Water – We Build, We Maintain", "Umeme na Maji – Tunajenga, Tunadumisha"),
+        logo={"url": logo_url, "alt": _t("Kilele Power & Water Engineering"), "width": 400, "height": 120,
               "sizes": {"sm": logo_url, "md": logo_url, "lg": logo_url}},
-        logo_dark={"url": logo_url, "alt": _t("Volt & Water Engineering"), "width": 400, "height": 120,
+        logo_dark={"url": logo_url, "alt": _t("Kilele Power & Water Engineering"), "width": 400, "height": 120,
                    "sizes": {"sm": logo_url, "md": logo_url, "lg": logo_url}},
         favicon={"url": logo_url, "alt": _t("Favicon"), "width": 32, "height": 32,
                  "sizes": {"sm": logo_url, "md": logo_url, "lg": logo_url}},
-        phones=["+255 222 123 456", "+255 754 123 456"],
-        emails=["info@voltwater.co.tz", "support@voltwater.co.tz"],
-        whatsapp_number="+255754123456",
-        working_hours=_t("Mon–Fri 08:00–17:00", "Jumatatu–Ijumaa 08:00–17:00"),
-        address=_t("Plot 45, Kinondoni Road, Dar es Salaam", "Kiwanja Na. 45, Barabara ya Kinondoni, Dar es Salaam"),
+        phones=["+255 700 000 001"],
+        emails=["info@kileleengineering.co.tz"],
+        whatsapp_number="+255700000001",
+        working_hours=_t("Mon–Fri 8:00am–5:00pm; Sat 8:00am–1:00pm", "Jumatatu–Ijumaa 8:00–17:00; Jumamosi 8:00–13:00"),
+        address=_t("Mikocheni B, Old Bagamoyo Road, Dar es Salaam", "Mikocheni B, Barabara ya Old Bagamoyo, Dar es Salaam"),
         social={
-            "facebook": "https://facebook.com/voltwater",
-            "instagram": "https://instagram.com/voltwater",
+            "facebook": "",
+            "instagram": "",
             "x": "",
-            "linkedin": "https://linkedin.com/company/voltwater",
+            "linkedin": "",
             "youtube": "",
             "tiktok": "",
         },
         footer_text=_t(
-            "Volt & Water Engineering Ltd is a leading provider of electrical and water engineering services across Tanzania.",
-            "Volt & Water Engineering Ltd ni kampuni inayoongoza katika kutoa huduma za uhandisi wa umeme na maji kote Tanzania.",
+            "Kilele Power & Water Engineering Ltd – A Tanzanian engineering company for electricity and water, serving homes, businesses, industries and institutions since 2014.",
+            "Kilele Power & Water Engineering Ltd – kampuni ya Kitanzania ya uhandisi wa umeme na maji, ikihudumia makazi, biashara, viwanda na taasisi tangu 2014.",
         ),
         default_seo=_seo(
-            "Volt & Water Engineering Ltd – Tanzania",
-            "Leading electrical and water engineering company in Tanzania.",
+            "Kilele Power & Water Engineering Ltd – Tanzania",
+            "Tanzanian engineering company for electricity and water solutions.",
         ),
-        notify_emails=["info@voltwater.co.tz"],
+        notify_emails=["info@kileleengineering.co.tz"],
         home_sections=[
             {"key": "hero", "enabled": True, "sort": 1},
             {"key": "stats", "enabled": True, "sort": 2},
@@ -180,56 +180,43 @@ async def seed_hero_slides() -> None:
         return
     slides = [
         HeroSlide(
-            image=_img("water", "Water Engineering", "Uhandisi wa Maji", 1600, 900),
-            headline=_t("Clean Water for Every Community", "Maji Safi kwa Kila Jamii"),
+            image=_img("electricity", "Electricity Solutions", "Suluhisho za Umeme", 1600, 900),
+            headline=_t("Reliable Electricity & Water Solutions", "Suluhisho za Uhakika za Umeme na Maji"),
             text=_t(
-                "Designing and building water supply and sanitation systems that last for generations.",
-                "Kubuni na kujenga mifumo ya maji na usafi inayodumu kwa vizazi.",
-            ),
-            button1_label=_t("View Projects", "Angalia Miradi"),
-            button1_url="/projects",
-            button2_label=_t("Request a Service", "Omba Huduma"),
-            button2_url="/request-service",
-            sort=1, is_active=True,
-        ),
-        HeroSlide(
-            image=_img("electricity", "Electrical Engineering", "Uhandisi wa Umeme", 1600, 900),
-            headline=_t("Reliable Electrical Engineering Solutions", "Suluhisho la Kuaminika la Uhandisi wa Umeme"),
-            text=_t(
-                "From grid connections to industrial installations — serving all 26 regions of Tanzania.",
-                "Kutoka muunganiko wa gridi hadi ufungaji wa viwanda — tunahudumia mikoa yote 26 ya Tanzania.",
+                "We design, build and maintain electrical and water systems for homes, businesses, industries and institutions across Tanzania.",
+                "Tunasanifu, kujenga na kutunza mifumo ya umeme na maji kwa nyumba, biashara, viwanda na taasisi kote Tanzania.",
             ),
             button1_label=_t("Our Services", "Huduma Zetu"),
             button1_url="/services",
             button2_label=_t("Contact Us", "Wasiliana Nasi"),
             button2_url="/contact",
+            sort=1, is_active=True,
+        ),
+        HeroSlide(
+            image=_img("electricity", "Safe Electricity", "Umeme Salama", 1600, 900),
+            headline=_t("Safe Electricity, Expert Work", "Umeme Salama, Kazi ya Kitaalamu"),
+            text=_t(
+                "From building wiring to power lines and transformers – work carried out by registered technicians and engineers.",
+                "Kuanzia wiring ya jengo hadi njia za umeme na transfoma – kazi inayofanywa na mafundi na wahandisi waliosajiliwa.",
+            ),
+            button1_label=_t("Electrical Services", "Huduma za Umeme"),
+            button1_url="/services",
+            button2_label=_t("Request Service", "Omba Huduma"),
+            button2_url="/request-service",
             sort=2, is_active=True,
         ),
         HeroSlide(
-            image=_img("solar", "Solar Power", "Nishati ya Jua", 1600, 900),
-            headline=_t("Powering Tanzania with Solar Energy", "Kulisha Tanzania kwa Nishati ya Jua"),
+            image=_img("water", "Clean Water Systems", "Mifumo ya Maji Safi", 1600, 900),
+            headline=_t("Clean Water, Lasting Systems", "Maji Safi, Mifumo Inayodumu"),
             text=_t(
-                "Grid-tied and off-grid solar installations for homes, businesses and public facilities.",
-                "Ufungaji wa jua uliounganishwa na gridi na uliojitegemea kwa nyumba, biashara na huduma za umma.",
+                "Borehole drilling, pump installation, water tanks and pipe networks for communities, institutions and private clients.",
+                "Uchimbaji wa visima, ufungaji wa pampu, matenki na mitandao ya mabomba kwa jamii, taasisi na wateja binafsi.",
             ),
-            button1_label=_t("Solar Services", "Huduma za Jua"),
+            button1_label=_t("Water Services", "Huduma za Maji"),
             button1_url="/services",
-            button2_label=_t("Get a Quote", "Pata Bei"),
+            button2_label=_t("Request Service", "Omba Huduma"),
             button2_url="/request-service",
             sort=3, is_active=True,
-        ),
-        HeroSlide(
-            image=_img("training", "Engineering Training", "Mafunzo ya Uhandisi", 1600, 900),
-            headline=_t("Building Engineering Capacity", "Kujenga Uwezo wa Uhandisi"),
-            text=_t(
-                "Professional training programmes for the next generation of Tanzanian engineers.",
-                "Mipango ya mafunzo ya kitaalamu kwa kizazi kipya cha wahandisi wa Tanzania.",
-            ),
-            button1_label=_t("Our Training", "Mafunzo Yetu"),
-            button1_url="/training",
-            button2_label=_t("Apply Now", "Omba Sasa"),
-            button2_url="/training",
-            sort=4, is_active=True,
         ),
     ]
     for s in slides:
@@ -243,10 +230,10 @@ async def seed_stats() -> None:
         logger.info("Stats already seeded")
         return
     stats = [
-        Stat(label=_t("Projects Completed", "Miradi Iliyokamilika"), number=400, suffix="+", icon="briefcase", sort=1),
-        Stat(label=_t("Years of Experience", "Miaka ya Uzoefu"), number=15, suffix="+", icon="clock", sort=2),
-        Stat(label=_t("Satisfied Clients", "Wateja Walioridhika"), number=200, suffix="+", icon="users", sort=3),
-        Stat(label=_t("Regions Served", "Mikoa Inayohudumiwa"), number=26, suffix="", icon="map-pin", sort=4),
+        Stat(label=_t("Completed Projects", "Miradi Iliyokamilika"), number=120, suffix="+", icon="folder-check", sort=1),
+        Stat(label=_t("Clients Served", "Wateja Tuliowahudumia"), number=85, suffix="+", icon="users", sort=2),
+        Stat(label=_t("Years of Experience", "Miaka ya Uzoefu"), number=12, suffix="", icon="calendar", sort=3),
+        Stat(label=_t("Regions Covered", "Mikoa Tuliyofanya Kazi"), number=14, suffix="", icon="map-pin", sort=4),
     ]
     for s in stats:
         await s.insert()
@@ -260,52 +247,36 @@ async def seed_features() -> None:
         return
     features = [
         Feature(
-            title=_t("ERB Certified Engineers", "Wahandisi Wenye Cheti cha ERB"),
+            title=_t("Registered Professionals", "Wataalamu Waliosajiliwa"),
             text=_t(
-                "All our engineers are registered with the Engineers Registration Board (ERB) and hold international qualifications.",
-                "Wahandisi wetu wote wamesajiliwa na Bodi ya Usajili wa Wahandisi (ERB) na wana sifa za kimataifa.",
+                "All work is supervised by registered engineers.",
+                "Kazi zote zinasimamiwa na wahandisi waliosajiliwa.",
             ),
-            icon="award", sort=1,
+            icon="shield-check", sort=1,
         ),
         Feature(
-            title=_t("ISO 9001:2015 Certified", "Cheti cha ISO 9001:2015"),
+            title=_t("On-Time Delivery", "Kazi kwa Wakati"),
             text=_t(
-                "Our quality management system is ISO 9001:2015 certified, ensuring every project meets international standards.",
-                "Mfumo wetu wa usimamizi wa ubora una cheti cha ISO 9001:2015, kuhakikisha kila mradi unakidhi viwango vya kimataifa.",
+                "We plan carefully and deliver on the agreed schedule.",
+                "Tunapanga kwa umakini na kukabidhi kwa muda uliokubaliwa.",
             ),
-            icon="shield-check", sort=2,
+            icon="clock", sort=2,
         ),
         Feature(
-            title=_t("On-Time Delivery", "Uwasilishaji kwa Wakati"),
+            title=_t("Safety First", "Usalama Kwanza"),
             text=_t(
-                "We have a track record of completing 95% of projects on schedule and within the agreed budget.",
-                "Tuna rekodi ya kukamilisha 95% ya miradi kwa wakati na ndani ya bajeti iliyokubaliana.",
+                "We follow workplace safety procedures in every project.",
+                "Tunafuata taratibu za usalama kazini katika kila mradi.",
             ),
-            icon="clock", sort=3,
+            icon="hard-hat", sort=3,
         ),
         Feature(
-            title=_t("Nationwide Coverage", "Huduma Kote Tanzania"),
+            title=_t("One-Stop Contractor", "Umeme na Maji Pamoja"),
             text=_t(
-                "With offices in Dar es Salaam and Arusha, we operate across all 26 regions of mainland Tanzania.",
-                "Tuna ofisi Dar es Salaam na Arusha, tunafanya kazi katika mikoa yote 26 ya Tanzania Bara.",
+                "One contractor for all your electrical and water needs.",
+                "Mkandarasi mmoja kwa mahitaji yako yote ya umeme na maji.",
             ),
-            icon="map-pin", sort=4,
-        ),
-        Feature(
-            title=_t("Turnkey Solutions", "Suluhisho Kamili"),
-            text=_t(
-                "From survey and design through to construction, testing and handover — we handle the entire project lifecycle.",
-                "Kutoka upembuzi na usanifu hadi ujenzi, majaribio na ukabidhi — tunashughulikia mzunguko wote wa mradi.",
-            ),
-            icon="layers", sort=5,
-        ),
-        Feature(
-            title=_t("24/7 Support", "Msaada Saa 24/7"),
-            text=_t(
-                "Our emergency response team is available around the clock to handle critical electrical and water system faults.",
-                "Timu yetu ya kukabiliana na dharura inapatikana saa nne na saa nne kushughulikia hitilafu muhimu za mifumo ya umeme na maji.",
-            ),
-            icon="headphones", sort=6,
+            icon="layers", sort=4,
         ),
     ]
     for f in features:
@@ -320,52 +291,44 @@ async def seed_work_steps() -> None:
         return
     steps = [
         WorkStep(
-            title=_t("Initial Consultation", "Ushauri wa Awali"),
+            title=_t("Initial Consultation", "Mawasiliano ya Awali"),
             text=_t(
-                "We meet with you to understand your project requirements, site conditions and budget constraints.",
-                "Tunakutana nawe kuelewa mahitaji ya mradi wako, hali ya eneo na vikwazo vya bajeti.",
+                "We listen to your needs and budget.",
+                "Tunasikiliza mahitaji yako na bajeti yako.",
             ),
             icon="message-circle", sort=1,
         ),
         WorkStep(
-            title=_t("Site Survey & Design", "Upembuzi wa Eneo na Usanifu"),
+            title=_t("Site Survey & Design", "Ukaguzi wa Eneo na Usanifu"),
             text=_t(
-                "Our engineers conduct a detailed site survey and produce comprehensive engineering designs and BOQs.",
-                "Wahandisi wetu wanafanya upembuzi wa kina wa eneo na kutoa michoro ya kina ya uhandisi na BOQ.",
+                "Engineers inspect the site and prepare drawings and BOQ.",
+                "Wahandisi wanakagua eneo na kuandaa michoro na gharama (BOQ).",
             ),
             icon="drafting-compass", sort=2,
         ),
         WorkStep(
-            title=_t("Procurement", "Ununuzi wa Vifaa"),
+            title=_t("Execution", "Utekelezaji"),
             text=_t(
-                "We source and procure all materials and equipment from approved suppliers to meet project specifications.",
-                "Tunanunua vifaa na vifaa vyote kutoka kwa wasambazaji walioidhinishwa kulingana na maelezo ya mradi.",
+                "Our technicians carry out the work safely and on schedule.",
+                "Mafundi wetu wanatekeleza kazi kwa usalama na kwa ratiba.",
             ),
-            icon="shopping-cart", sort=3,
+            icon="hard-hat", sort=3,
         ),
         WorkStep(
-            title=_t("Construction & Installation", "Ujenzi na Ufungaji"),
+            title=_t("Testing", "Upimaji"),
             text=_t(
-                "Our skilled teams execute the work safely, to spec and on the agreed schedule.",
-                "Timu zetu stadi zinatekeleza kazi kwa usalama, kulingana na maelezo na ratiba iliyokubaliana.",
+                "Every system is tested before handover.",
+                "Kila mfumo unapimwa kabla ya kukabidhiwa.",
             ),
-            icon="hard-hat", sort=4,
+            icon="check-circle", sort=4,
         ),
         WorkStep(
-            title=_t("Testing & Commissioning", "Majaribio na Uzinduzi"),
+            title=_t("Handover & Aftercare", "Makabidhiano na Huduma Baadaye"),
             text=_t(
-                "Every system is rigorously tested and commissioned before handover to ensure it performs as designed.",
-                "Kila mfumo unajaribiwa kwa kina na kuzinduliwa kabla ya ukabidhi kuhakikisha inafanya kazi kama ilivyobuniwa.",
+                "We hand over with full documentation and continue to provide maintenance services.",
+                "Tunakabidhi pamoja na nyaraka na kuendelea kutoa huduma ya matengenezo.",
             ),
-            icon="check-circle", sort=5,
-        ),
-        WorkStep(
-            title=_t("Handover & After-Sales", "Ukabidhi na Huduma Baada ya Mauzo"),
-            text=_t(
-                "We hand over a fully tested system with all documentation and provide ongoing maintenance and support.",
-                "Tunakabidhia mfumo uliojaribiwa kikamilifu na nyaraka zote na kutoa matengenezo na msaada unaoendelea.",
-            ),
-            icon="package", sort=6,
+            icon="package", sort=5,
         ),
     ]
     for s in steps:
@@ -380,21 +343,21 @@ async def seed_pages() -> None:
             "key": "about",
             "title": _t("About Us", "Kuhusu Sisi"),
             "intro": _t(
-                "Volt & Water Engineering Ltd has been powering homes, businesses and communities across Tanzania since 2009.",
-                "Volt & Water Engineering Ltd imekuwa ikiendesha nyumba, biashara na jamii kote Tanzania tangu 2009.",
+                "Kilele Power & Water Engineering Ltd has been providing electricity and water solutions across Tanzania since 2014.",
+                "Kilele Power & Water Engineering Ltd imekuwa ikitoa suluhisho za umeme na maji kote Tanzania tangu 2014.",
             ),
             "body": _t(
-                "<p>Founded in 2009, Volt & Water Engineering Ltd has grown to become one of Tanzania's most trusted electrical and water engineering firms. We combine deep technical expertise with a genuine commitment to quality, safety and timely delivery.</p>"
-                "<p>Our team of over 80 engineers, technicians and support staff works across all 26 regions of Tanzania, delivering solutions that range from small residential installations to large-scale national infrastructure projects.</p>"
-                "<p>We are registered with the Engineers Registration Board (ERB), accredited to ISO 9001:2015, and hold approvals from TANESCO, EWURA, REA and OSHA Tanzania.</p>",
-                "<p>Ilianzishwa mwaka 2009, Volt & Water Engineering Ltd imekua kuwa moja ya makampuni ya uhandisi wa umeme na maji yanayoaminika zaidi Tanzania. Tunachanganya utaalamu wa kina wa kiufundi na dhamira ya kweli ya ubora, usalama na uwasilishaji kwa wakati.</p>"
-                "<p>Timu yetu ya wahandisi, mafundi na wafanyakazi wa msaada zaidi ya 80 inafanya kazi katika mikoa yote 26 ya Tanzania, ikitoa suluhisho kuanzia ufungaji mdogo wa nyumba hadi miradi mikubwa ya miundombinu ya kitaifa.</p>",
+                "<p>Founded in 2014, Kilele Power & Water Engineering Ltd has grown to become a trusted electrical and water engineering company in Tanzania. We combine technical expertise with a genuine commitment to quality, safety and timely delivery.</p>"
+                "<p>Our team of engineers, technicians and support staff works across Tanzania, delivering solutions for homes, businesses, industries and institutions.</p>"
+                "<p>We are registered with the Engineers Registration Board (ERB), hold a CRB contractor licence, an EWURA electrical installation licence and are registered with BRELA.</p>",
+                "<p>Ilianzishwa mwaka 2014, Kilele Power & Water Engineering Ltd imekua kuwa kampuni ya uhandisi wa umeme na maji inayoaminika Tanzania. Tunachanganya utaalamu wa kiufundi na dhamira ya kweli ya ubora, usalama na uwasilishaji kwa wakati.</p>"
+                "<p>Timu yetu ya wahandisi, mafundi na wafanyakazi wa msaada inafanya kazi Tanzania, ikitoa suluhisho kwa nyumba, biashara, viwanda na taasisi.</p>",
             ),
             "banner": _img("construction", "About Us", "Kuhusu Sisi", 1600, 700),
-            "seo": _seo("About Us | Volt & Water Engineering", "Learn about Volt & Water Engineering Ltd — Tanzania's trusted electrical and water engineering firm."),
+            "seo": _seo("About Us | Kilele Power & Water Engineering", "Learn about Kilele Power & Water Engineering Ltd — Tanzania's trusted electrical and water engineering company."),
             "vision": _t(
-                "To be the most trusted and innovative engineering company in East and Central Africa.",
-                "Kuwa kampuni ya uhandisi inayoaminika na yenye ubunifu zaidi Afrika Mashariki na Kati.",
+                "To be the most trusted engineering company for electricity and water in Tanzania.",
+                "Kuwa kampuni ya uhandisi inayoaminika zaidi kwa umeme na maji Tanzania.",
             ),
             "mission": _t(
                 "To deliver safe, reliable and affordable electrical and water engineering solutions that improve the quality of life for Tanzanians.",
@@ -417,8 +380,8 @@ async def seed_pages() -> None:
             "key": "privacy",
             "title": _t("Privacy Policy", "Sera ya Faragha"),
             "intro": _t(
-                "Your privacy is important to us. This policy explains how Volt & Water Engineering Ltd collects, uses and protects your personal information.",
-                "Faragha yako ni muhimu kwetu. Sera hii inaeleza jinsi Volt & Water Engineering Ltd inavyokusanya, kutumia na kulinda taarifa zako binafsi.",
+                "Your privacy is important to us. This policy explains how Kilele Power & Water Engineering Ltd collects, uses and protects your personal information.",
+                "Faragha yako ni muhimu kwetu. Sera hii inaeleza jinsi Kilele Power & Water Engineering Ltd inavyokusanya, kutumia na kulinda taarifa zako binafsi.",
             ),
             "body": _t(
                 "<h2>Information We Collect</h2>"
@@ -428,7 +391,7 @@ async def seed_pages() -> None:
                 "<h2>Data Security</h2>"
                 "<p>We implement appropriate technical and organisational measures to protect your personal information against unauthorised access, alteration, disclosure or destruction.</p>"
                 "<h2>Contact Us</h2>"
-                "<p>If you have any questions about this privacy policy, please contact us at <a href='mailto:info@voltwater.co.tz'>info@voltwater.co.tz</a>.</p>",
+                "<p>If you have any questions about this privacy policy, please contact us at <a href='mailto:info@kileleengineering.co.tz'>info@kileleengineering.co.tz</a>.</p>",
                 "<h2>Taarifa Tunazokusanya</h2>"
                 "<p>Tunakusanya taarifa binafsi unazotoa kwa hiari kupitia fomu zetu za mawasiliano, fomu za maombi ya huduma na fomu za maombi ya mafunzo.</p>"
                 "<h2>Jinsi Tunavyotumia Taarifa Zako</h2>"
@@ -437,7 +400,7 @@ async def seed_pages() -> None:
                 "<p>Tunatekeleza hatua zinazofaa za kiufundi na za kiutaratibu kulinda taarifa zako binafsi dhidi ya ufikiaji usioidhinishwa.</p>",
             ),
             "banner": _img("office", "Privacy Policy", "Sera ya Faragha", 1600, 500),
-            "seo": _seo("Privacy Policy | Volt & Water", "Privacy policy for Volt & Water Engineering Ltd."),
+            "seo": _seo("Privacy Policy | Kilele Power & Water Engineering", "Privacy policy for Kilele Power & Water Engineering Ltd."),
         },
     ]
     for pd in pages_data:
@@ -457,11 +420,11 @@ async def seed_service_categories() -> None:
         logger.info("ServiceCategories already seeded")
         return
     cats = [
-        ServiceCategory(name=_t("Electrical Engineering", "Uhandisi wa Umeme"),
-                        slug="electrical", icon="zap", colour="#F59E0B", sort=1,
+        ServiceCategory(name=_t("Electricity", "Umeme"),
+                        slug="electricity", icon="bolt", colour="#F59E0B", sort=1,
                         created_at=NOW, updated_at=NOW),
-        ServiceCategory(name=_t("Water Engineering", "Uhandisi wa Maji"),
-                        slug="water", icon="droplets", colour="#0EA5E9", sort=2,
+        ServiceCategory(name=_t("Water", "Maji"),
+                        slug="water", icon="droplet", colour="#0EA5E9", sort=2,
                         created_at=NOW, updated_at=NOW),
     ]
     for c in cats:
@@ -475,90 +438,88 @@ async def seed_services() -> None:
         logger.info("Services already seeded")
         return
 
-    elec = await ServiceCategory.find_one({"slug": "electrical"})
+    elec = await ServiceCategory.find_one({"slug": "electricity"})
     water = await ServiceCategory.find_one({"slug": "water"})
     elec_id = str(elec.id) if elec else ""
     water_id = str(water.id) if water else ""
 
-    # (slug, title_en, title_sw, cat_id, is_featured, photo_category, body_en)
+    # (slug, title_en, title_sw, desc_en, desc_sw, cat_id, is_featured, photo_category)
     services_data = [
         (
-            "grid-connection", "Grid Connection Services", "Huduma za Muunganiko wa Gridi",
+            "building-wiring", "Building Wiring", "Wiring wa Majengo",
+            "New wiring and electrical renovation for homes, offices, shops and industries to safety standards.",
+            "Wiring mpya na ukarabati wa umeme kwa nyumba, ofisi, maduka na viwanda kwa viwango vya usalama.",
             elec_id, True, "electricity",
-            "<p>We handle the full process of connecting homes, commercial premises and industrial facilities to the national grid. Our team coordinates with TANESCO at every stage to ensure a smooth, compliant and timely connection.</p>"
-            "<ul><li>Low voltage (LV) residential and commercial connections</li><li>Medium voltage (MV) industrial connections</li><li>Load assessments and power quality studies</li><li>Metering installation and inspection</li></ul>",
         ),
         (
-            "solar-installation", "Solar Power Installation", "Ufungaji wa Nishati ya Jua",
-            elec_id, True, "solar",
-            "<p>We design and install grid-tied, off-grid and hybrid solar photovoltaic systems for residential, commercial and institutional clients. All installations comply with REA guidelines and use tier-1 solar components.</p>"
-            "<ul><li>Rooftop and ground-mounted PV systems</li><li>Battery storage systems</li><li>Solar water pumping</li><li>System monitoring and maintenance</li></ul>",
+            "power-lines", "Power Line Construction", "Ujenzi wa Njia za Umeme",
+            "Construction of low and medium voltage (LV/MV) lines including pole installation.",
+            "Ujenzi wa njia za msongo mdogo na wa kati (LV/MV), pamoja na usimikaji wa nguzo.",
+            elec_id, True, "electricity",
         ),
         (
-            "industrial-wiring", "Industrial Wiring & Installations", "Uwezeshaji wa Viwanda",
+            "transformer-installation", "Transformer Installation", "Ufungaji wa Transfoma",
+            "Installation, testing and maintenance of transformers for industries and residential areas.",
+            "Ufungaji, upimaji na matengenezo ya transfoma kwa viwanda na makazi.",
             elec_id, False, "electricity",
-            "<p>From small factories to large industrial plants, we design and install complete electrical wiring systems that are safe, efficient and built to last.</p>"
-            "<ul><li>HV/MV/LV wiring and cable management</li><li>Motor control centres (MCC)</li><li>Distribution boards and switchgear</li><li>Earthing and lightning protection</li></ul>",
         ),
         (
-            "transformer-installation", "Transformer Installation & Maintenance", "Ufungaji na Matengenezo ya Transfoma",
+            "solar-systems", "Solar Power Systems", "Mifumo ya Umeme wa Jua",
+            "Design and installation of solar systems for homes, schools, clinics and businesses.",
+            "Kusanifu na kufunga mifumo ya solar kwa nyumba, shule, zahanati na biashara.",
             elec_id, False, "electricity",
-            "<p>We supply, install, test and maintain distribution transformers for TANESCO, municipalities, industries and large commercial facilities.</p>"
-            "<ul><li>11kV/415V distribution transformers</li><li>Transformer testing and commissioning</li><li>Oil sampling and analysis</li><li>Preventive maintenance programmes</li></ul>",
         ),
         (
-            "street-lighting", "Street & Area Lighting", "Taa za Barabarani na Maeneo",
+            "street-lighting", "Street & Security Lighting", "Taa za Barabarani na Ulinzi",
+            "Installation of street lights, parking areas and security lighting.",
+            "Ufungaji wa taa za barabarani, maeneo ya maegesho na taa za ulinzi.",
             elec_id, False, "electricity",
-            "<p>We design, supply and install street lighting systems for municipalities, roads, industrial estates and public spaces across Tanzania.</p>"
-            "<ul><li>LED street light design and supply</li><li>Pole installation and cabling</li><li>Solar-powered street lighting</li><li>Smart lighting control systems</li></ul>",
         ),
         (
-            "electrical-inspection", "Electrical Inspection & Testing", "Ukaguzi na Majaribio ya Umeme",
+            "electrical-inspection", "Inspection & Maintenance", "Ukaguzi na Matengenezo",
+            "Electrical system inspection, testing and regular maintenance.",
+            "Ukaguzi wa mifumo ya umeme, upimaji (testing) na matengenezo ya mara kwa mara.",
             elec_id, False, "electricity",
-            "<p>Our accredited inspection team carries out thorough electrical testing and certification services for new installations, existing systems and insurance purposes.</p>"
-            "<ul><li>Installation condition reports (EICR)</li><li>Insulation resistance testing</li><li>Earth fault loop impedance testing</li><li>Thermographic surveys</li></ul>",
         ),
         (
-            "water-supply-design", "Water Supply System Design", "Usanifu wa Mfumo wa Maji",
+            "borehole-drilling", "Borehole Drilling", "Uchimbaji wa Visima",
+            "Groundwater research, borehole drilling and completion.",
+            "Utafiti wa maji chini ya ardhi, uchimbaji na ukamilishaji wa visima virefu.",
             water_id, True, "water",
-            "<p>We provide end-to-end water supply system design services — from hydrological studies and demand analysis through to detailed engineering drawings and construction supervision.</p>"
-            "<ul><li>Water demand forecasting</li><li>Pipe network hydraulic modelling</li><li>Pumping station design</li><li>Reservoir and elevated tank design</li></ul>",
         ),
         (
-            "borehole-drilling", "Borehole Drilling & Equipping", "Uchimbaji na Uwezeshaji wa Visima",
+            "pump-installation", "Pump Installation", "Ufungaji wa Pampu",
+            "Installation of electric and solar pumps for boreholes and water tanks.",
+            "Ufungaji wa pampu za umeme na za nishati ya jua kwa visima na matenki.",
             water_id, True, "water",
-            "<p>We drill, case, develop, test and equip boreholes for rural communities, urban areas, agriculture and industry across Tanzania.</p>"
-            "<ul><li>Hydrogeological surveys</li><li>Rotary and DTH borehole drilling</li><li>Pump installation and testing</li><li>Water quality analysis</li></ul>",
         ),
         (
-            "water-treatment", "Water Treatment Plants", "Vinu vya Kutibu Maji",
+            "water-distribution", "Water Distribution Systems", "Mifumo ya Usambazaji Maji",
+            "Design and construction of water distribution networks for villages, institutions and housing.",
+            "Kusanifu na kujenga mitandao ya usambazaji maji kwa vijiji, taasisi na makazi.",
             water_id, False, "water",
-            "<p>We design, construct and commission water treatment plants for municipal water utilities, industries and rural water supply schemes.</p>"
-            "<ul><li>Conventional and compact treatment plants</li><li>Chemical dosing systems</li><li>Filtration and disinfection</li><li>Sludge management systems</li></ul>",
         ),
         (
-            "irrigation-systems", "Irrigation Systems", "Mifumo ya Umwagiliaji",
+            "pipe-laying", "Pipe Laying", "Ulazaji wa Mabomba",
+            "Installation of main and distribution pipes including network extensions.",
+            "Ulazaji wa mabomba makuu na ya kusambaza, pamoja na upanuzi wa mtandao.",
             water_id, False, "water",
-            "<p>We design and install drip, sprinkler and furrow irrigation systems for smallholder farmers, large-scale farms and irrigation schemes funded by government and development partners.</p>"
-            "<ul><li>Irrigation scheme master planning</li><li>Pumping and conveyance systems</li><li>Drip and micro-irrigation</li><li>Farmer training and capacity building</li></ul>",
         ),
         (
-            "sewerage-systems", "Sewerage & Sanitation Systems", "Mifumo ya Maji Taka na Usafi",
+            "water-tanks", "Water Tanks & Towers", "Matenki na Minara ya Maji",
+            "Construction and installation of underground and elevated water tanks.",
+            "Ujenzi na ufungaji wa matenki ya ardhini na ya juu.",
             water_id, False, "water",
-            "<p>We design and construct sewerage networks, wastewater treatment plants and on-site sanitation facilities for municipalities, institutions and industries.</p>"
-            "<ul><li>Gravity sewer network design</li><li>Wastewater treatment plants</li><li>Septic tanks and soak pits</li><li>Faecal sludge management</li></ul>",
         ),
         (
-            "rainwater-harvesting", "Rainwater Harvesting Systems", "Mifumo ya Uvunaji wa Maji ya Mvua",
+            "water-maintenance", "Water System Maintenance", "Matengenezo ya Mifumo ya Maji",
+            "Fixing leaks, replacing pumps and maintaining existing water systems.",
+            "Kurekebisha uvujaji, kubadilisha pampu na kutunza mifumo iliyopo.",
             water_id, False, "water",
-            "<p>We design and install rainwater harvesting systems for schools, clinics, households and community centres — a sustainable solution for water-scarce areas.</p>"
-            "<ul><li>Roof catchment assessment</li><li>Storage tank sizing and installation</li><li>First-flush diverters and filtration</li><li>Community maintenance training</li></ul>",
         ),
     ]
 
-    for slug, title_en, title_sw, cat_id, is_featured, photo_cat, body_en in services_data:
-        summary_en = f"Professional {title_en.lower()} services delivered across Tanzania by ERB-certified engineers."
-        summary_sw = f"Huduma za kitaalamu za {title_sw.lower()} zinazotolewa kote Tanzania na wahandisi wenye cheti cha ERB."
+    for slug, title_en, title_sw, desc_en, desc_sw, cat_id, is_featured, photo_cat in services_data:
         s = Service(
             status="published",
             slug=slug,
@@ -567,18 +528,17 @@ async def seed_services() -> None:
             title=_t(title_en, title_sw),
             icon="wrench",
             cover=_img(photo_cat, title_en, title_sw, 900, 600),
-            summary=_t(summary_en, summary_sw),
-            body=_t(body_en, f"<p>{summary_sw}</p>"),
+            summary=_t(desc_en, desc_sw),
+            body=_t(f"<p>{desc_en}</p>", f"<p>{desc_sw}</p>"),
             included=[
-                _t("Site survey and assessment", "Upembuzi na tathmini ya eneo"),
-                _t("Detailed engineering design", "Usanifu wa kina wa uhandisi"),
-                _t("Material procurement and supply", "Ununuzi na usambazaji wa vifaa"),
+                _t("Site survey and assessment", "Ukaguzi wa eneo"),
+                _t("Engineering design", "Usanifu wa uhandisi"),
+                _t("Material procurement", "Ununuzi wa vifaa"),
                 _t("Construction and installation", "Ujenzi na ufungaji"),
-                _t("Testing and commissioning", "Majaribio na uzinduzi"),
-                _t("As-built drawings and documentation", "Michoro na nyaraka za mwisho"),
+                _t("Testing and handover", "Upimaji na makabidhiano"),
             ],
             is_featured=is_featured,
-            seo=_seo(f"{title_en} | Volt & Water Engineering", summary_en),
+            seo=_seo(f"{title_en} | Kilele Power & Water Engineering", desc_en),
             created_at=NOW, updated_at=NOW,
         )
         await s.insert()
@@ -592,82 +552,68 @@ async def seed_projects() -> None:
         logger.info("Projects already seeded")
         return
 
-    elec = await ServiceCategory.find_one({"slug": "electrical"})
+    elec = await ServiceCategory.find_one({"slug": "electricity"})
     water = await ServiceCategory.find_one({"slug": "water"})
     elec_id = str(elec.id) if elec else ""
     water_id = str(water.id) if water else ""
 
-    # (slug, title_en, title_sw, cat_id, client, loc, region, start, end, value, is_featured, proj_status, photo_cat)
+    # (slug, title_en, title_sw, cat_id, loc, year, proj_status, photo_cat, desc_en, desc_sw)
     projects = [
         (
-            "dar-es-salaam-grid-upgrade",
-            "Dar es Salaam Grid Upgrade Phase II",
-            "Uboreshaji wa Gridi ya Dar es Salaam Awamu ya II",
-            elec_id, "TANESCO", "Kinondoni & Ilala, Dar es Salaam", "Dar es Salaam",
-            date(2022, 1, 15), date(2023, 6, 30), 850_000_000, True, "completed", "electricity",
-            "Upgrading 42km of overhead MV lines from 11kV to 33kV across two districts to reduce system losses and improve reliability for 35,000 customers.",
+            "grain-mill-electrical",
+            "Grain Mill Electrical Installation",
+            "Umeme kwa Kiwanda cha Kusindika Nafaka",
+            elec_id, "Mbezi, Dar es Salaam", 2024, "completed", "electricity",
+            "Installation of a 315kVA transformer and complete factory wiring.",
+            "Ufungaji wa transfoma ya 315kVA na wiring kamili wa kiwanda.",
         ),
         (
-            "dodoma-rural-water-supply",
-            "Dodoma Rural Water Supply Scheme",
-            "Skimu ya Maji ya Vijijini Dodoma",
-            water_id, "DAWASA / World Bank", "Chamwino & Kondoa Districts, Dodoma", "Dodoma",
-            date(2021, 3, 1), date(2022, 9, 30), 1_200_000_000, True, "completed", "water",
-            "Designing and constructing a piped water supply scheme serving 18 villages with a combined population of 42,000 people, including borehole drilling, pumping stations and 85km of distribution piping.",
+            "mvumi-village-water",
+            "Mvumi Village Water System",
+            "Mfumo wa Maji Kijiji cha Mvumi",
+            water_id, "Chamwino, Dodoma", 2023, "completed", "water",
+            "Borehole drilling, solar pump, 50,000-litre tank and 6 water collection points.",
+            "Uchimbaji wa kisima, pampu ya solar, tenki la lita 50,000 na vituo 6 vya kuchotea maji.",
         ),
         (
-            "arusha-solar-farm",
-            "Arusha 2MW Solar Farm",
-            "Shamba la Jua la 2MW Arusha",
-            elec_id, "REA Tanzania / AfDB", "Monduli District, Arusha", "Arusha",
-            date(2023, 7, 1), None, 2_500_000_000, False, "ongoing", "solar",
-            "EPC contract for a 2MW ground-mounted solar photovoltaic farm to supply clean electricity to rural communities in three wards currently off-grid.",
+            "clinic-solar-4",
+            "Solar for 4 Health Clinics",
+            "Solar kwa Zahanati 4",
+            elec_id, "Kongwa, Dodoma", 2024, "completed", "electricity",
+            "Battery-backed solar systems for night services and vaccine refrigerators.",
+            "Mifumo ya solar yenye betri kwa huduma za usiku na majokofu ya chanjo.",
         ),
         (
-            "mwanza-borehole-network",
-            "Mwanza Peri-Urban Borehole Network",
-            "Mtandao wa Visima vya Mwanza",
-            water_id, "Mwanza City Council / UNICEF", "Ilemela District, Mwanza", "Mwanza",
-            date(2022, 10, 1), date(2023, 12, 31), 450_000_000, False, "completed", "water",
-            "Drilling and equipping 12 production boreholes with solar-powered pumps and constructing 3,200m of distribution pipework to serve 15,000 peri-urban residents.",
+            "kibaha-pipe-network",
+            "Kibaha Pipe Network Extension",
+            "Upanuzi wa Mtandao wa Mabomba",
+            water_id, "Kibaha, Pwani", 2025, "ongoing", "water",
+            "8km pipe laying to reach 1,200 households.",
+            "Ulazaji wa mabomba km 8 kufikisha maji kwa kaya 1,200.",
         ),
         (
-            "mbeya-street-lighting",
-            "Mbeya City Street Lighting Upgrade",
-            "Uboreshaji wa Taa za Barabarani Mbeya",
-            elec_id, "Mbeya City Council", "Mbeya City, Mbeya", "Mbeya",
-            date(2023, 1, 10), date(2023, 8, 31), 320_000_000, False, "completed", "electricity",
-            "Supply and installation of 1,200 LED street lights along 48km of urban roads, replacing old sodium vapour fittings and reducing the council's electricity consumption by 65%.",
+            "morogoro-street-lights",
+            "Town Street Lighting",
+            "Taa za Barabarani Mji Mdogo",
+            elec_id, "Morogoro", 2023, "completed", "electricity",
+            "Installation of 150 solar street lights.",
+            "Ufungaji wa taa 150 za solar za barabarani.",
         ),
         (
-            "morogoro-irrigation-scheme",
-            "Morogoro Lower Valley Irrigation Scheme",
-            "Skimu ya Umwagiliaji ya Bonde la Chini Morogoro",
-            water_id, "Ministry of Agriculture / IFAD", "Kilosa District, Morogoro", "Morogoro",
-            date(2024, 2, 1), None, 980_000_000, False, "ongoing", "water",
-            "Design and construction of a 450-hectare gravity-fed irrigation scheme serving 850 smallholder farming households with reliable water access year-round.",
-        ),
-        (
-            "zanzibar-solar-street-lights",
-            "Zanzibar Solar Street Lighting",
-            "Taa za Barabarani za Jua Zanzibar",
-            elec_id, "ZEC / JICA", "Stone Town & North A, Zanzibar", "Zanzibar",
-            date(2023, 9, 1), date(2024, 3, 31), 580_000_000, False, "completed", "solar",
-            "Supply and installation of 800 solar-powered street lights across 30km of roads in Zanzibar Stone Town and surrounding areas, improving public safety and reducing municipal energy costs.",
-        ),
-        (
-            "tabora-water-treatment-plant",
-            "Tabora Water Treatment Plant Rehabilitation",
-            "Ukarabati wa Kinu cha Kutibu Maji Tabora",
-            water_id, "DAWASCO / IsDB", "Tabora Municipality, Tabora", "Tabora",
-            date(2022, 6, 1), date(2023, 5, 31), 760_000_000, False, "completed", "water",
-            "Full rehabilitation of a 10,000m³/day water treatment plant including rapid sand filters, chemical dosing systems, disinfection and SCADA installation.",
+            "singida-school-boreholes",
+            "Boreholes for 5 Secondary Schools",
+            "Visima kwa Shule 5 za Sekondari",
+            water_id, "Singida", 2025, "ongoing", "water",
+            "Borehole drilling and tank systems for 5 schools.",
+            "Uchimbaji wa visima na mifumo ya matenki kwa shule 5.",
         ),
     ]
 
     for idx, row in enumerate(projects):
-        (slug, title_en, title_sw, cat_id, client, loc, region,
-         start, end, value, is_featured, proj_status, photo_cat, scope_text) = row
+        (slug, title_en, title_sw, cat_id, loc, year,
+         proj_status, photo_cat, desc_en, desc_sw) = row
+        end_date = date(year, 12, 31) if proj_status == "completed" else None
+        start_date = date(year, 1, 1)
         p = Project(
             status="published",
             slug=slug,
@@ -675,23 +621,23 @@ async def seed_projects() -> None:
             sort=idx + 1,
             category_id=cat_id,
             title=_t(title_en, title_sw),
-            client_name=client,
+            client_name="",
             location=loc,
-            region=region,
-            start_date=start,
-            end_date=end,
-            value_tzs=value,
-            hide_value=False,
+            region=loc.split(",")[-1].strip(),
+            start_date=start_date,
+            end_date=end_date,
+            value_tzs=0,
+            hide_value=True,
             project_status=proj_status,
-            summary=_t(scope_text, scope_text),
-            scope=_t(f"<p>{scope_text}</p>", f"<p>{scope_text}</p>"),
+            summary=_t(desc_en, desc_sw),
+            scope=_t(f"<p>{desc_en}</p>", f"<p>{desc_sw}</p>"),
             outcome=_t(
-                "<p>Project completed successfully within the agreed timeline and budget. All systems tested, commissioned and handed over to the client with full documentation.</p>",
-                "<p>Mradi ulikamilika kwa mafanikio ndani ya muda na bajeti iliyokubaliana. Mifumo yote ilijaribiwa, kuzinduliwa na kukabidhiwa kwa mteja na nyaraka kamili.</p>",
-            ) if end else _t("<p>Project currently under construction and on schedule.</p>", "<p>Mradi uko katika ujenzi na uko kwenye ratiba.</p>"),
+                "<p>Project completed successfully. All systems tested and handed over with full documentation.</p>",
+                "<p>Mradi ulikamilika kwa mafanikio. Mifumo yote ilijaribiwa na kukabidhiwa na nyaraka kamili.</p>",
+            ) if end_date else _t("<p>Project currently underway and on schedule.</p>", "<p>Mradi unaendelea na uko kwenye ratiba.</p>"),
             cover=_img(photo_cat, title_en, title_sw, 900, 600),
-            is_featured=is_featured,
-            seo=_seo(f"{title_en} | Volt & Water Engineering", scope_text[:160]),
+            is_featured=idx < 2,
+            seo=_seo(f"{title_en} | Kilele Power & Water Engineering", desc_en),
             created_at=NOW, updated_at=NOW,
         )
         await p.insert()
@@ -707,150 +653,136 @@ async def seed_training() -> None:
     programmes = [
         TrainingProgramme(
             status="published",
-            slug="electrical-installation-wiring",
-            slug_sw="ufungaji-na-uwezeshaji-wa-umeme",
+            slug="electrical-wiring",
+            slug_sw="wiring-na-ufungaji-wa-umeme",
             sort=1,
-            title=_t("Electrical Installation & Wiring", "Ufungaji na Uwezeshaji wa Umeme"),
-            cover=_img("electricity", "Electrical Installation Training", "Mafunzo ya Ufungaji wa Umeme", 900, 600),
+            title=_t("Building Wiring & Electrical Installation", "Wiring na Ufungaji wa Umeme"),
+            cover=_img("electricity", "Building Wiring Training", "Mafunzo ya Wiring", 900, 600),
             summary=_t(
-                "A comprehensive, hands-on training programme covering electrical installation, wiring regulations, safety and testing. Ideal for technicians seeking ERB registration.",
-                "Programu ya mafunzo ya kina na ya vitendo inayoshughulikia ufungaji wa umeme, kanuni za wiring, usalama na majaribio. Nzuri kwa mafundi wanaotafuta usajili wa ERB.",
+                "Hands-on training covering building wiring, electrical installation and safety standards.",
+                "Mafunzo ya vitendo yanayoshughulikia wiring ya majengo, ufungaji wa umeme na viwango vya usalama.",
             ),
             audience=_t(
-                "Electrical technicians, artisans and engineers with at least 1 year of practical experience.",
-                "Mafundi wa umeme, mafundi na wahandisi wenye angalau mwaka 1 wa uzoefu wa vitendo.",
+                "Form four graduates and beginner technicians.",
+                "Wahitimu wa kidato cha nne na mafundi wanaoanza.",
             ),
             requirements=_t(
-                "Form IV certificate or VETA Level II electrical qualification. Candidates must bring proof of practical experience.",
-                "Cheti cha Kidato cha Nne au sifa ya VETA Level II ya umeme. Wagombea lazima walете uthibitisho wa uzoefu wa vitendo.",
+                "Form IV certificate.",
+                "Cheti cha Kidato cha Nne.",
             ),
             outline=_t(
-                "<p><strong>Module 1 (3 days):</strong> Electrical theory, circuit analysis and wiring regulations<br>"
-                "<strong>Module 2 (5 days):</strong> Installation practices — conduit, trunking and cable management<br>"
-                "<strong>Module 3 (4 days):</strong> Distribution boards, switchgear and protection devices<br>"
-                "<strong>Module 4 (3 days):</strong> Testing, inspection and commissioning<br>"
-                "<strong>Module 5 (2 days):</strong> Electrical safety, HSE and emergency procedures<br>"
-                "<strong>Module 6 (3 days):</strong> Practical project and assessment</p>",
-                "<p><strong>Moduli 1 (Siku 3):</strong> Nadharia ya umeme, uchanganuzi wa mzunguko na kanuni za wiring<br>"
-                "<strong>Moduli 2 (Siku 5):</strong> Mazoea ya ufungaji — conduit, trunking na usimamizi wa kebo<br>"
-                "<strong>Moduli 3 (Siku 4):</strong> Ubao wa usambazaji, switchgear na vifaa vya ulinzi<br>"
-                "<strong>Moduli 4 (Siku 3):</strong> Majaribio, ukaguzi na uzinduzi<br>"
-                "<strong>Moduli 5 (Siku 2):</strong> Usalama wa umeme, HSE na taratibu za dharura<br>"
-                "<strong>Moduli 6 (Siku 3):</strong> Mradi wa vitendo na tathmini</p>",
+                "<p><strong>Week 1–2:</strong> Electrical theory and wiring regulations<br>"
+                "<strong>Week 3–4:</strong> Practical installation and testing<br>"
+                "<strong>Week 5–6:</strong> Safety, assessment and certification</p>",
+                "<p><strong>Wiki 1–2:</strong> Nadharia ya umeme na kanuni za wiring<br>"
+                "<strong>Wiki 3–4:</strong> Ufungaji wa vitendo na majaribio<br>"
+                "<strong>Wiki 5–6:</strong> Usalama, tathmini na utoaji wa cheti</p>",
             ),
-            duration=_t("4 weeks (20 training days)", "Wiki 4 (Siku 20 za mafunzo)"),
+            duration=_t("6 weeks", "Wiki 6"),
             mode="classroom",
             fee_tzs=350_000,
             certificate=_t(
-                "Certificate in Electrical Installation & Wiring (recognised by ERB)",
-                "Cheti cha Ufungaji na Uwezeshaji wa Umeme (kinatambuliwa na ERB)",
+                "Certificate in Building Wiring & Electrical Installation",
+                "Cheti cha Wiring na Ufungaji wa Umeme",
             ),
             venue=_t(
-                "Volt & Water Engineering Training Centre, Kinondoni, Dar es Salaam",
-                "Kituo cha Mafunzo cha Volt & Water Engineering, Kinondoni, Dar es Salaam",
+                "Kilele Power & Water Engineering Training Centre, Dar es Salaam",
+                "Kituo cha Mafunzo cha Kilele Power & Water Engineering, Dar es Salaam",
             ),
             is_open=True,
             seo=_seo(
-                "Electrical Installation & Wiring Training | Volt & Water",
-                "Hands-on electrical installation and wiring training in Tanzania — recognised by ERB.",
+                "Building Wiring & Electrical Installation Training | Kilele",
+                "Hands-on building wiring and electrical installation training in Tanzania.",
             ),
             created_at=NOW, updated_at=NOW,
         ),
         TrainingProgramme(
             status="published",
-            slug="water-system-design-management",
-            slug_sw="usanifu-na-usimamizi-wa-mfumo-wa-maji",
+            slug="solar-installation",
+            slug_sw="ufungaji-wa-mifumo-ya-solar",
             sort=2,
-            title=_t("Water System Design & Management", "Usanifu na Usimamizi wa Mfumo wa Maji"),
-            cover=_img("water", "Water System Training", "Mafunzo ya Mfumo wa Maji", 900, 600),
+            title=_t("Solar System Installation", "Ufungaji wa Mifumo ya Solar"),
+            cover=_img("electricity", "Solar Installation Training", "Mafunzo ya Solar", 900, 600),
             summary=_t(
-                "Learn to design, install, operate and maintain rural and urban water supply systems. Covers hydraulic modelling, borehole development and O&M best practices.",
-                "Jifunza kubuni, kufunga, kuendesha na kudumisha mifumo ya maji ya vijijini na mijini. Inashughulikia mfano wa hydraulic, maendeleo ya visima na mazoea bora ya O&M.",
+                "Practical training on the installation and maintenance of solar power systems.",
+                "Mafunzo ya vitendo ya ufungaji na matengenezo ya mifumo ya nishati ya jua.",
             ),
             audience=_t(
-                "Civil engineers, water utility operators, NGO staff and government water department technicians.",
-                "Wahandisi wa ujenzi, waendeshaji wa maji, wafanyakazi wa NGO na mafundi wa idara ya maji ya serikali.",
+                "Electrical technicians.",
+                "Mafundi wa umeme.",
             ),
             requirements=_t(
-                "Diploma in Civil Engineering, Water Engineering or equivalent. Basic computer skills required.",
-                "Stashahada ya Uhandisi wa Ujenzi, Uhandisi wa Maji au sawa. Ujuzi wa msingi wa kompyuta unahitajika.",
+                "Basic electrical knowledge or Form IV certificate.",
+                "Ujuzi wa msingi wa umeme au cheti cha Kidato cha Nne.",
             ),
             outline=_t(
-                "<p><strong>Module 1 (3 days):</strong> Hydrology and water resources assessment<br>"
-                "<strong>Module 2 (4 days):</strong> Water system design — pipes, pumps and storage<br>"
-                "<strong>Module 3 (3 days):</strong> Borehole development and water quality<br>"
-                "<strong>Module 4 (3 days):</strong> Operation and maintenance of water systems<br>"
-                "<strong>Module 5 (2 days):</strong> Community engagement and tariff setting</p>",
-                "<p><strong>Moduli 1 (Siku 3):</strong> Haidrolojia na tathmini ya rasilimali za maji<br>"
-                "<strong>Moduli 2 (Siku 4):</strong> Usanifu wa mfumo wa maji — mabomba, pampu na uhifadhi<br>"
-                "<strong>Moduli 3 (Siku 3):</strong> Maendeleo ya visima na ubora wa maji<br>"
-                "<strong>Moduli 4 (Siku 3):</strong> Uendeshaji na matengenezo ya mifumo ya maji<br>"
-                "<strong>Moduli 5 (Siku 2):</strong> Ushirikishwaji wa jamii na uwekaji wa ada</p>",
+                "<p><strong>Week 1:</strong> Solar fundamentals and system sizing<br>"
+                "<strong>Week 2:</strong> Panel, inverter and battery installation<br>"
+                "<strong>Week 3:</strong> Testing, commissioning and maintenance</p>",
+                "<p><strong>Wiki 1:</strong> Misingi ya solar na upangaji wa mfumo<br>"
+                "<strong>Wiki 2:</strong> Ufungaji wa paneli, inverter na betri<br>"
+                "<strong>Wiki 3:</strong> Upimaji, uzinduzi na matengenezo</p>",
             ),
-            duration=_t("3 weeks (15 training days)", "Wiki 3 (Siku 15 za mafunzo)"),
-            mode="blended",
-            fee_tzs=400_000,
+            duration=_t("3 weeks", "Wiki 3"),
+            mode="classroom",
+            fee_tzs=250_000,
             certificate=_t(
-                "Certificate in Water System Design & Management (endorsed by EWURA)",
-                "Cheti cha Usanifu na Usimamizi wa Mfumo wa Maji (kinaidhinishwa na EWURA)",
+                "Certificate in Solar System Installation",
+                "Cheti cha Ufungaji wa Mifumo ya Solar",
             ),
             venue=_t(
-                "Volt & Water Engineering Training Centre, Kinondoni, Dar es Salaam",
-                "Kituo cha Mafunzo cha Volt & Water Engineering, Kinondoni, Dar es Salaam",
+                "Kilele Power & Water Engineering Training Centre, Dar es Salaam",
+                "Kituo cha Mafunzo cha Kilele Power & Water Engineering, Dar es Salaam",
             ),
             is_open=True,
             seo=_seo(
-                "Water System Design & Management Training | Volt & Water",
-                "Professional water system design and management training endorsed by EWURA.",
+                "Solar System Installation Training | Kilele",
+                "Practical solar system installation training for electrical technicians.",
             ),
             created_at=NOW, updated_at=NOW,
         ),
         TrainingProgramme(
             status="published",
-            slug="solar-pv-installation",
-            slug_sw="ufungaji-wa-nishati-ya-jua",
+            slug="plumbing-water",
+            slug_sw="ufundi-bomba-na-mifumo-ya-maji",
             sort=3,
-            title=_t("Solar PV Installation & Maintenance", "Ufungaji na Matengenezo ya Paneli za Jua"),
-            cover=_img("solar", "Solar PV Training", "Mafunzo ya Paneli za Jua", 900, 600),
+            title=_t("Plumbing & Water Systems", "Ufundi Bomba na Mifumo ya Maji"),
+            cover=_img("water", "Plumbing Training", "Mafunzo ya Ufundi Bomba", 900, 600),
             summary=_t(
-                "A practical training course on the design, installation, commissioning and maintenance of solar PV systems — grid-tied, off-grid and hybrid.",
-                "Kozi ya mafunzo ya vitendo kuhusu usanifu, ufungaji, uzinduzi na matengenezo ya mifumo ya PV ya jua — iliyounganishwa na gridi, inayojitegemea na mseto.",
+                "Training on plumbing and water system installation and maintenance.",
+                "Mafunzo ya ufundi bomba na ufungaji na matengenezo ya mifumo ya maji.",
             ),
             audience=_t(
-                "Electricians, electrical engineers and technicians wishing to specialise in solar energy.",
-                "Mafundi wa umeme, wahandisi wa umeme na mafundi wanaotaka kutaalamu katika nishati ya jua.",
+                "Form four graduates and beginner technicians.",
+                "Wahitimu wa kidato cha nne na mafundi wanaoanza.",
             ),
             requirements=_t(
-                "Basic electrical knowledge equivalent to Form IV or VETA Level I.",
-                "Maarifa ya msingi ya umeme sawa na Kidato cha Nne au VETA Level I.",
+                "Form IV certificate.",
+                "Cheti cha Kidato cha Nne.",
             ),
             outline=_t(
-                "<p><strong>Module 1 (2 days):</strong> Solar energy fundamentals and system sizing<br>"
-                "<strong>Module 2 (3 days):</strong> PV panel, inverter and battery installation<br>"
-                "<strong>Module 3 (2 days):</strong> Grid-tied system installation and anti-islanding<br>"
-                "<strong>Module 4 (2 days):</strong> System testing, commissioning and monitoring<br>"
-                "<strong>Module 5 (1 day):</strong> Fault diagnosis and preventive maintenance</p>",
-                "<p><strong>Moduli 1 (Siku 2):</strong> Misingi ya nishati ya jua na upangaji wa ukubwa wa mfumo<br>"
-                "<strong>Moduli 2 (Siku 3):</strong> Ufungaji wa paneli za PV, inverter na betri<br>"
-                "<strong>Moduli 3 (Siku 2):</strong> Ufungaji wa mfumo ulioratibishwa na gridi<br>"
-                "<strong>Moduli 4 (Siku 2):</strong> Majaribio, uzinduzi na ufuatiliaji wa mfumo<br>"
-                "<strong>Moduli 5 (Siku 1):</strong> Utambuzi wa hitilafu na matengenezo ya kuzuia</p>",
+                "<p><strong>Week 1:</strong> Plumbing fundamentals and pipe materials<br>"
+                "<strong>Week 2–3:</strong> Pipe laying and fitting installation<br>"
+                "<strong>Week 4:</strong> Pump systems, testing and assessment</p>",
+                "<p><strong>Wiki 1:</strong> Misingi ya ufundi bomba na vifaa vya mabomba<br>"
+                "<strong>Wiki 2–3:</strong> Ulazaji wa mabomba na ufungaji wa vifaa<br>"
+                "<strong>Wiki 4:</strong> Mifumo ya pampu, majaribio na tathmini</p>",
             ),
-            duration=_t("2 weeks (10 training days)", "Wiki 2 (Siku 10 za mafunzo)"),
+            duration=_t("4 weeks", "Wiki 4"),
             mode="classroom",
-            fee_tzs=300_000,
+            fee_tzs=280_000,
             certificate=_t(
-                "Certificate in Solar PV Installation & Maintenance (REA approved)",
-                "Cheti cha Ufungaji na Matengenezo ya Paneli za Jua (imeidhinishwa na REA)",
+                "Certificate in Plumbing & Water Systems",
+                "Cheti cha Ufundi Bomba na Mifumo ya Maji",
             ),
             venue=_t(
-                "Volt & Water Engineering Training Centre, Kinondoni, Dar es Salaam",
-                "Kituo cha Mafunzo cha Volt & Water Engineering, Kinondoni, Dar es Salaam",
+                "Kilele Power & Water Engineering Training Centre, Dar es Salaam",
+                "Kituo cha Mafunzo cha Kilele Power & Water Engineering, Dar es Salaam",
             ),
             is_open=True,
             seo=_seo(
-                "Solar PV Installation Training | Volt & Water",
-                "Hands-on solar PV installation and maintenance training — REA approved.",
+                "Plumbing & Water Systems Training | Kilele",
+                "Practical plumbing and water systems training in Tanzania.",
             ),
             created_at=NOW, updated_at=NOW,
         ),
@@ -889,27 +821,27 @@ async def seed_training() -> None:
         logger.info("TrainingSteps already seeded")
         return
     steps = [
-        TrainingStep(number=1, title=_t("Apply Online", "Omba Mtandaoni"),
-                     text=_t("Complete the application form on our website with your personal details, qualifications and work experience.", "Jaza fomu ya maombi kwenye tovuti yetu na maelezo yako binafsi, sifa na uzoefu wa kazi."),
+        TrainingStep(number=1, title=_t("Apply Online", "Jaza Fomu Mtandaoni"),
+                     text=_t("Fill in the online application form.", "Jaza fomu ya maombi mtandaoni."),
                      icon="file-text"),
-        TrainingStep(number=2, title=_t("Application Review", "Mapitio ya Maombi"),
-                     text=_t("Our admissions team reviews your application and notifies you of the outcome within 3 working days.", "Timu yetu ya uandikishaji inaangalia maombi yako na kukujulisha matokeo ndani ya siku 3 za kazi."),
+        TrainingStep(number=2, title=_t("Application Review", "Ukaguzi wa Maombi"),
+                     text=_t("Applications are reviewed.", "Maombi yanakaguliwa."),
                      icon="search"),
-        TrainingStep(number=3, title=_t("Fee Payment", "Malipo ya Ada"),
-                     text=_t("Upon acceptance, pay the registration fee via bank transfer or mobile money (M-Pesa / Tigo Pesa).", "Baada ya kukubaliwa, lipa ada ya usajili kupitia uhamisho wa benki au pesa za rununu (M-Pesa / Tigo Pesa)."),
+        TrainingStep(number=3, title=_t("Notification", "Taarifa"),
+                     text=_t("Selected candidates are notified by phone or SMS.", "Waliochaguliwa wanajulishwa kwa simu au SMS."),
+                     icon="bell"),
+        TrainingStep(number=4, title=_t("Fee Payment", "Kulipa Ada"),
+                     text=_t("Pay fees and confirm your place.", "Kulipa ada na kuthibitisha nafasi."),
                      icon="credit-card"),
-        TrainingStep(number=4, title=_t("Attend Training", "Hudhuria Mafunzo"),
-                     text=_t("Attend all scheduled classroom and practical sessions. Training materials are provided at no extra cost.", "Hudhuria vikao vyote vilivyopangwa vya darasani na vitendo. Vifaa vya mafunzo vinatolewa bila gharama ya ziada."),
-                     icon="calendar"),
-        TrainingStep(number=5, title=_t("Assessment", "Tathmini"),
-                     text=_t("Complete written and practical assessments at the end of the programme. A minimum pass mark of 60% is required.", "Kamilisha tathmini za maandishi na vitendo mwishoni mwa programu. Alama ya chini ya kufaulu ya 60% inahitajika."),
+        TrainingStep(number=5, title=_t("Training", "Mafunzo"),
+                     text=_t("Classroom and hands-on practical training.", "Mafunzo ya darasani na ya vitendo kazini."),
+                     icon="book-open"),
+        TrainingStep(number=6, title=_t("Assessment", "Tathmini"),
+                     text=_t("Final assessment.", "Tathmini ya mwisho."),
                      icon="clipboard-check"),
-        TrainingStep(number=6, title=_t("Graduation", "Kuhitimu"),
-                     text=_t("Successful candidates receive their certificates at a graduation ceremony held at our training centre.", "Wagombea waliofaulu wanapokea vyeti vyao katika sherehe ya kuhitimu inayofanyika katika kituo chetu cha mafunzo."),
-                     icon="graduation-cap"),
-        TrainingStep(number=7, title=_t("Alumni Network", "Mtandao wa Wahitimu"),
-                     text=_t("Join our growing alumni network and access career support, job alerts and continuing professional development resources.", "Jiunge na mtandao wetu unaokua wa wahitimu na upate msaada wa kazi, arifa za kazi na rasilimali za maendeleo ya kitaalamu inayoendelea."),
-                     icon="users"),
+        TrainingStep(number=7, title=_t("Certificate Award", "Kutunukiwa Cheti"),
+                     text=_t("Certificate award.", "Kutunukiwa cheti."),
+                     icon="award"),
     ]
     for step in steps:
         await step.insert()
@@ -991,24 +923,18 @@ async def seed_team() -> None:
         logger.info("Certifications already seeded")
         return
     certs = [
-        Certification(name=_t("ERB Registration", "Usajili wa ERB"),
-                      issuer="Engineers Registration Board of Tanzania", number="ERB/2009/0045",
+        Certification(name=_t("Engineers Registration Board (ERB)", "Bodi ya Usajili wa Wahandisi (ERB)"),
+                      issuer="ERB Tanzania", number="",
                       logo=_img("office", "ERB", "ERB", 300, 150), sort=1),
-        Certification(name=_t("ISO 9001:2015", "ISO 9001:2015"),
-                      issuer="Bureau Veritas Certification", number="BV-ISO-9001-TZ-2019",
-                      logo=_img("office", "ISO 9001", "ISO 9001", 300, 150), sort=2),
-        Certification(name=_t("TANESCO Approved Contractor", "Mkandarasi Aliyeidhinishwa TANESCO"),
-                      issuer="Tanzania Electric Supply Company (TANESCO)", number="TANESCO/AC/2015/112",
-                      logo=_img("electricity", "TANESCO", "TANESCO", 300, 150), sort=3),
-        Certification(name=_t("EWURA Licensed Operator", "Opereta Mwenye Leseni ya EWURA"),
-                      issuer="Energy and Water Utilities Regulatory Authority (EWURA)", number="EWURA/WO/2016/078",
-                      logo=_img("water", "EWURA", "EWURA", 300, 150), sort=4),
-        Certification(name=_t("OSHA Safety Certification", "Cheti cha Usalama cha OSHA"),
-                      issuer="Occupational Safety and Health Authority (OSHA) Tanzania", number="OSHA-TZ/2020/1234",
-                      logo=_img("construction", "OSHA", "OSHA", 300, 150), sort=5),
-        Certification(name=_t("REA Approved Solar Installer", "Mfungaji wa Jua Aliyeidhinishwa REA"),
-                      issuer="Rural Energy Agency (REA)", number="REA/SI/2018/045",
-                      logo=_img("solar", "REA", "REA", 300, 150), sort=6),
+        Certification(name=_t("Contractors Registration Board (CRB)", "Bodi ya Wakandarasi (CRB)"),
+                      issuer="CRB Tanzania", number="",
+                      logo=_img("office", "CRB", "CRB", 300, 150), sort=2),
+        Certification(name=_t("EWURA Electrical Installation Licence", "Leseni ya EWURA ya Ufungaji wa Umeme"),
+                      issuer="EWURA", number="",
+                      logo=_img("electricity", "EWURA", "EWURA", 300, 150), sort=3),
+        Certification(name=_t("BRELA Business Registration", "Usajili wa BRELA"),
+                      issuer="BRELA Tanzania", number="",
+                      logo=_img("office", "BRELA", "BRELA", 300, 150), sort=4),
     ]
     for c in certs:
         await c.insert()
@@ -1049,48 +975,37 @@ async def seed_clients() -> None:
         return
     testimonials = [
         Testimonial(
-            name="Eng. Ali Hassan",
-            position=_t("Projects Manager, TANESCO", "Meneja wa Miradi, TANESCO"),
-            organisation="TANESCO",
-            photo=_img("people", "Ali Hassan", "Ali Hassan", 300, 300),
+            name="Village Chairman",
+            position=_t("Village Chairman, Chamwino", "Mwenyekiti wa Kijiji, Chamwino"),
+            organisation="Chamwino",
+            photo=_img("people", "Village Chairman", "Mwenyekiti", 300, 300),
             quote=_t(
-                "Volt & Water delivered our Dar es Salaam grid upgrade on time and within budget. Their engineers are professional and their project management is first class.",
-                "Volt & Water waliwasilisha uboreshaji wetu wa gridi ya Dar es Salaam kwa wakati na ndani ya bajeti. Wahandisi wao ni wataalamu na usimamizi wao wa miradi ni wa daraja la kwanza.",
+                "They installed the water system in our village on time. Mothers no longer walk long distances to fetch water.",
+                "Walitufungia mfumo wa maji kijijini kwetu kwa muda waliouahidi. Sasa akina mama hawatembei tena umbali mrefu kutafuta maji.",
             ),
             rating=5, sort=1, is_active=True,
         ),
         Testimonial(
-            name="Ms. Sarah Kimani",
-            position=_t("Group CEO, Azam Group", "Mkurugenzi Mtendaji, Azam Group"),
-            organisation="Azam Group",
-            photo=_img("people", "Sarah Kimani", "Sarah Kimani", 300, 300),
+            name="Factory Manager",
+            position=_t("Factory Manager, Dar es Salaam", "Meneja wa Kiwanda, Dar es Salaam"),
+            organisation="Dar es Salaam",
+            photo=_img("people", "Factory Manager", "Meneja wa Kiwanda", 300, 300),
             quote=_t(
-                "The solar installation at our Mbeya factory has reduced our electricity bills by over 60%. The Volt & Water team was professional from start to finish.",
-                "Ufungaji wa jua katika kiwanda chetu cha Mbeya umepunguza bili zetu za umeme kwa zaidi ya 60%. Timu ya Volt & Water ilikuwa kitaalamu tangu mwanzo hadi mwisho.",
+                "The electrical work at our factory was done with great care and safety. We have had no problems since.",
+                "Kazi ya umeme kiwandani kwetu ilifanywa kwa umakini na usalama mkubwa. Tangu hapo hatujapata tatizo.",
             ),
             rating=5, sort=2, is_active=True,
         ),
         Testimonial(
-            name="Mr. John Mlay",
-            position=_t("Country Director, WaterAid Tanzania", "Mkurugenzi wa Nchi, WaterAid Tanzania"),
-            organisation="WaterAid Tanzania",
-            photo=_img("people", "John Mlay", "John Mlay", 300, 300),
+            name="Clinic Medical Officer",
+            position=_t("Clinic Medical Officer, Kongwa", "Daktari Mkuu wa Zahanati, Kongwa"),
+            organisation="Kongwa",
+            photo=_img("people", "Medical Officer", "Daktari", 300, 300),
             quote=_t(
-                "The borehole network Volt & Water installed in Mwanza now provides clean water to over 15,000 people daily. We are very pleased with the quality of their work.",
-                "Mtandao wa visima ambao Volt & Water uliofunga Mwanza sasa unatoa maji safi kwa zaidi ya watu 15,000 kila siku. Tunafurahi sana na ubora wa kazi yao.",
+                "The solar they installed allows us to treat patients at night without worry.",
+                "Solar waliyotufungia inatuwezesha kuhudumia wagonjwa usiku bila wasiwasi.",
             ),
             rating=5, sort=3, is_active=True,
-        ),
-        Testimonial(
-            name="Eng. David Rutabanzibwa",
-            position=_t("Director of Infrastructure, Mbeya City Council", "Mkurugenzi wa Miundombinu, Halmashauri ya Jiji la Mbeya"),
-            organisation="Mbeya City Council",
-            photo=_img("people", "David Rutabanzibwa", "", 300, 300),
-            quote=_t(
-                "Our street lighting project was completed on schedule and the LED lights are performing exactly as specified. We would not hesitate to work with Volt & Water again.",
-                "Mradi wetu wa taa za barabarani ulikamilika kwa wakati na taa za LED zinaonyesha utendaji kama ilivyoainishwa. Hatusiti kufanya kazi na Volt & Water tena.",
-            ),
-            rating=5, sort=4, is_active=True,
         ),
     ]
     for t in testimonials:
@@ -1105,74 +1020,34 @@ async def seed_posts() -> None:
         return
     posts = [
         (
-            "rea-rural-electrification-contract-2025",
-            "Volt & Water Wins Major REA Rural Electrification Contract",
-            "Volt & Water Inashinda Mkataba Mkubwa wa REA wa Usambazaji wa Umeme Vijijini",
-            "news", True, "electricity",
-            "We are proud to announce that Volt & Water Engineering has been awarded a TZS 4.2 billion contract by the Rural Energy Agency (REA) to extend the national grid to 32 villages in Mbeya and Iringa regions.",
-            "Tunafurahi kutangaza kwamba Volt & Water Engineering imepewa mkataba wa TZS bilioni 4.2 na Wakala wa Nishati Vijijini (REA) ili kupanua gridi ya taifa hadi vijiji 32 katika mikoa ya Mbeya na Iringa.",
+            "mvumi-water-project-complete",
+            "Mvumi Village Water Project Complete",
+            "Tumekamilisha Mradi wa Maji Kijiji cha Mvumi",
+            "news", True, "water",
+            "More than 3,000 residents now have clean water close to their homes. The project included borehole drilling, solar pump installation and 6 collection points.",
+            "Wakazi zaidi ya 3,000 sasa wanapata maji safi karibu na makazi yao. Mradi ulijumuisha uchimbaji wa kisima, ufungaji wa pampu ya solar na vituo 6 vya kuchotea.",
         ),
         (
-            "solar-energy-expo-tanzania-2026",
-            "Volt & Water at Solar Energy Expo Tanzania 2026",
-            "Volt & Water Kwenye Maonyesho ya Nishati ya Jua Tanzania 2026",
-            "event", True, "solar",
-            "Join us at Solar Energy Expo Tanzania 2026, where we will be showcasing our latest solar PV installation capabilities and off-grid energy solutions. Visit us at Stand B-14.",
-            "Jiunge nasi kwenye Maonyesho ya Nishati ya Jua Tanzania 2026, ambapo tutaonyesha uwezo wetu wa hivi karibuni wa ufungaji wa PV ya jua na suluhisho za nishati ya off-grid.",
+            "solar-training-intake-open",
+            "Solar Training Intake Now Open",
+            "Usajili wa Mafunzo ya Solar Umefunguliwa",
+            "announcement", True, "electricity",
+            "25 places available for the intake starting next month. Apply online now.",
+            "Nafasi 25 kwa awamu inayoanza mwezi ujao. Omba sasa mtandaoni.",
         ),
         (
-            "water-safety-training-programme-2026",
-            "New Water Safety & Quality Training Programme Launched",
-            "Programu Mpya ya Mafunzo ya Usalama na Ubora wa Maji Imezinduliwa",
-            "announcement", False, "water",
-            "We have launched a new short course on water safety and quality management, designed for water utility operators and municipal water department staff. Applications are now open.",
-            "Tumezindua kozi mpya ya muda mfupi kuhusu usalama wa maji na usimamizi wa ubora, iliyoundwa kwa waendeshaji wa maji na wafanyakazi wa idara ya maji ya manispaa.",
-        ),
-        (
-            "mwanza-borehole-project-completion",
-            "Mwanza Borehole Network — Project Completion Report",
-            "Mtandao wa Visima Mwanza — Ripoti ya Kukamilika kwa Mradi",
-            "news", False, "water",
-            "We are pleased to report the successful completion of the Mwanza peri-urban borehole network project. The 12 solar-powered boreholes now supply clean water to over 15,000 residents in Ilemela District.",
-            "Tunafurahi kutoa taarifa ya kukamilika kwa mafanikio kwa mradi wa mtandao wa visima wa miji ya Mwanza. Visima 12 vinavyotumia nishati ya jua sasa vinatoa maji safi kwa wakazi zaidi ya 15,000 katika Wilaya ya Ilemela.",
-        ),
-        (
-            "tender-electrical-dodoma-university",
-            "Tender Notice: Electrical Works — Dodoma University Phase III",
-            "Tangazo la Zabuni: Kazi za Umeme — Chuo Kikuu cha Dodoma Awamu ya III",
-            "tender", False, "electricity",
-            "Volt & Water Engineering invites qualified electrical contractors to submit tenders for the supply and installation of electrical systems for the Phase III expansion of a major university in Dodoma.",
-            "Volt & Water Engineering inaalika makandarasi wa umeme waliohitimu kuwasilisha zabuni kwa usambazaji na ufungaji wa mifumo ya umeme kwa upanuzi wa Awamu ya III wa chuo kikuu kikubwa Dodoma.",
-        ),
-        (
-            "iso-9001-2015-recertification",
-            "Volt & Water Achieves ISO 9001:2015 Recertification",
-            "Volt & Water Inapata Uthibitisho Upya wa ISO 9001:2015",
-            "news", True, "construction",
-            "We are delighted to announce that Volt & Water Engineering has successfully achieved recertification to ISO 9001:2015 by Bureau Veritas. This recertification confirms our ongoing commitment to quality management excellence.",
-            "Tunafurahi kutangaza kwamba Volt & Water Engineering imefanikisha kupata uthibitisho upya wa ISO 9001:2015 na Bureau Veritas. Uthibitisho huu unathibitisha dhamira yetu inayoendelea ya ubora wa usimamizi.",
-        ),
-        (
-            "arusha-solar-farm-groundbreaking",
-            "Groundbreaking Ceremony — Arusha 2MW Solar Farm",
-            "Sherehe ya Kuanzisha — Shamba la Jua la 2MW Arusha",
-            "news", False, "solar",
-            "We marked the official start of construction of the Arusha 2MW Solar Farm with a groundbreaking ceremony attended by the Regional Commissioner of Arusha and representatives of REA and AfDB.",
-            "Tuliashiria mwanzo rasmi wa ujenzi wa Shamba la Jua la 2MW la Arusha kwa sherehe ya kuanzisha iliyohudhuria na Mkuu wa Mkoa wa Arusha na wawakilishi wa REA na AfDB.",
-        ),
-        (
-            "dar-es-salaam-grid-upgrade-completion",
-            "Dar es Salaam Grid Upgrade Phase II — Successfully Completed",
-            "Uboreshaji wa Gridi ya Dar es Salaam Awamu ya II — Umekamilika kwa Mafanikio",
-            "news", False, "electricity",
-            "We are proud to announce the successful completion of the Dar es Salaam Grid Upgrade Phase II project for TANESCO. The 42km of upgraded MV lines will improve electricity reliability for 35,000 customers.",
-            "Tunafurahi kutangaza kukamilika kwa mafanikio kwa mradi wa Uboreshaji wa Gridi ya Dar es Salaam Awamu ya II kwa TANESCO. Mistari ya 42km ya MV iliyoboreshwa itaboresha kuaminika kwa umeme kwa wateja 35,000.",
+            "sabasaba-exhibition",
+            "Visit Us at Sabasaba Exhibition",
+            "Tutakuwepo Maonesho ya Sabasaba",
+            "event", False, "electricity",
+            "Visit our stand to learn about our electrical and water services. Free consultations available.",
+            "Tembelea banda letu kujifunza kuhusu huduma zetu za umeme na maji. Ushauri bila malipo.",
         ),
     ]
     for slug, title_en, title_sw, cat, is_featured, photo_cat, excerpt_en, excerpt_sw in posts:
         body_en = (
             f"<p>{excerpt_en}</p>"
-            "<p>For more information about this project or to request a similar service, please <a href='/contact'>contact us</a> or submit a <a href='/request-service'>service request</a>.</p>"
+            "<p>For more information, please <a href='/contact'>contact us</a> or submit a <a href='/request-service'>service request</a>.</p>"
         )
         await Post(
             status="published",
@@ -1186,7 +1061,7 @@ async def seed_posts() -> None:
             body=_t(body_en, f"<p>{excerpt_sw}</p>"),
             published_at=NOW,
             is_featured=is_featured,
-            seo=_seo(f"{title_en} | Volt & Water Engineering", excerpt_en[:160]),
+            seo=_seo(f"{title_en} | Kilele Power & Water Engineering", excerpt_en[:160]),
             created_at=NOW, updated_at=NOW,
         ).insert()
     logger.info("Posts seeded (%d)", len(posts))
@@ -1276,51 +1151,24 @@ async def seed_faqs() -> None:
         logger.info("FAQs already seeded")
         return
     faqs = [
-        ("general", "What areas of Tanzania do you serve?", "Mnafanya kazi katika maeneo gani ya Tanzania?",
-         "We operate in all 26 regions of mainland Tanzania. We have permanent offices in Dar es Salaam and Arusha, and we mobilise site teams to any region.",
-         "Tunafanya kazi katika mikoa yote 26 ya Tanzania Bara. Tuna ofisi za kudumu Dar es Salaam na Arusha, na tunahamisha timu za eneo kwenda mkoa wowote.", 1),
-        ("general", "How do I request a quotation?", "Ninawezaje kuomba bei?",
-         "You can submit a service request through our website, email us at info@voltwater.co.tz or call +255 222 123 456. We respond within 1 working day.",
-         "Unaweza kuwasilisha ombi la huduma kupitia tovuti yetu, utumie barua pepe kwa info@voltwater.co.tz au piga simu +255 222 123 456. Tunajibu ndani ya siku 1 ya kazi.", 2),
-        ("general", "Are your engineers registered with ERB?", "Je, wahandisi wenu wamesajiliwa na ERB?",
-         "Yes. All our engineers are registered with the Engineers Registration Board (ERB) of Tanzania and are covered by professional indemnity insurance.",
-         "Ndiyo. Wahandisi wetu wote wamesajiliwa na Bodi ya Usajili wa Wahandisi (ERB) ya Tanzania na wana bima ya uwajibikaji wa kitaalamu.", 3),
-        ("general", "Do you offer warranties on your work?", "Je, mnatoa dhamana kwa kazi yenu?",
-         "Yes. We provide a 12-month workmanship warranty on all installations and projects. Manufacturers' warranties on equipment are passed through to the client.",
-         "Ndiyo. Tunatoa dhamana ya utengenezaji wa miezi 12 kwa ufungaji wote na miradi. Dhamana za watengenezaji kwa vifaa zinapitishwa kwa mteja.", 4),
-        ("general", "Are you ISO certified?", "Je, mna cheti cha ISO?",
-         "Yes. We are accredited to ISO 9001:2015 by Bureau Veritas, covering all our electrical and water engineering services.",
-         "Ndiyo. Tuna ithibati ya ISO 9001:2015 na Bureau Veritas, inayoshughulikia huduma zetu zote za uhandisi wa umeme na maji.", 5),
-        ("electricity", "Do you install solar power systems?", "Je, mnafunga mifumo ya nishati ya jua?",
-         "Yes. We design and install grid-tied, off-grid and hybrid solar PV systems for residential, commercial and institutional clients. We use tier-1 panels and inverters.",
-         "Ndiyo. Tunabuni na kufunga mifumo ya PV ya jua iliyounganishwa na gridi, inayojitegemea na mseto kwa wateja wa nyumba, biashara na taasisi. Tunatumia paneli na inverters za daraja la kwanza.", 1),
-        ("electricity", "Can you upgrade an old electrical installation?", "Je, mnaweza kuboresha ufungaji wa zamani wa umeme?",
-         "Yes. We carry out full electrical condition surveys and can design and implement upgrades to bring installations up to current wiring regulations.",
-         "Ndiyo. Tunafanya upembuzi kamili wa hali ya umeme na tunaweza kubuni na kutekeleza uboreshaji ili kuleta ufungaji kwa kanuni za sasa za wiring.", 2),
-        ("electricity", "Do you work with TANESCO on grid connections?", "Je, mnafanya kazi na TANESCO kwa muunganiko wa gridi?",
-         "Yes. We are a TANESCO-approved contractor and handle the entire grid connection process — from application through to energisation.",
-         "Ndiyo. Sisi ni mkandarasi aliyeidhinishwa na TANESCO na tunashughulikia mchakato wote wa muunganiko wa gridi — kutoka ombi hadi kupewa nguvu.", 3),
-        ("electricity", "Do you install transformer substations?", "Je, mnafunga vituo vidogo vya transfoma?",
-         "Yes. We supply, install, test and commission distribution transformers (11kV/415V and 33kV/415V) for TANESCO, municipalities and industrial clients.",
-         "Ndiyo. Tunatoa, kufunga, kujaribu na kuzindua transfoma za usambazaji (11kV/415V na 33kV/415V) kwa TANESCO, manispaa na wateja wa viwanda.", 4),
-        ("water", "Do you drill boreholes?", "Je, mnachimba visima?",
-         "Yes. We drill, case, develop, test and equip boreholes using modern rotary and DTH drilling rigs. We also carry out hydrogeological surveys.",
-         "Ndiyo. Tunachimba, kutubia, kukuza, kujaribu na kuweka vifaa kwenye visima kwa kutumia vifaa vya kisasa vya kuchimba vya rotary na DTH. Pia tunafanya upembuzi wa hydrogeolojia.", 1),
-        ("water", "What water treatment services do you offer?", "Mnatoa huduma gani za kutibu maji?",
-         "We design and construct water treatment plants for municipalities and industries, including sedimentation, filtration and chlorination systems.",
-         "Tunabuni na kujenga vinu vya kutibu maji kwa manispaa na viwanda, ikiwa ni pamoja na mifumo ya utulivu, uchujaji na uklorineshaji.", 2),
-        ("water", "Can you design a water supply system for a rural community?", "Je, mnaweza kubuni mfumo wa maji kwa jamii ya vijijini?",
-         "Yes. We have extensive experience designing and constructing piped water supply schemes for rural communities, including borehole sources, pumping systems and distribution networks.",
-         "Ndiyo. Tuna uzoefu mkubwa wa kubuni na kujenga skimu za maji za bomba kwa jamii za vijijini, ikiwa ni pamoja na visima, mifumo ya pampu na mitandao ya usambazaji.", 3),
-        ("training", "Who can attend your training programmes?", "Nani anaweza kuhudhuria mipango yenu ya mafunzo?",
-         "Our training is open to engineers, technicians, artisans and students. Each programme has its own entry requirements — please check the specific programme page.",
-         "Mafunzo yetu yako wazi kwa wahandisi, mafundi, mafundi na wanafunzi. Kila programu ina mahitaji yake ya kuingia — tafadhali angalia ukurasa wa programu maalum.", 1),
-        ("training", "Are your training certificates recognised?", "Je, vyeti vyenu vya mafunzo vinatambuliwa?",
-         "Our certificates are recognised by the Engineers Registration Board (ERB), EWURA and other professional bodies in Tanzania. The Solar PV course is approved by REA.",
-         "Vyeti vyetu vinatambuliwa na Bodi ya Usajili wa Wahandisi (ERB), EWURA na vyombo vingine vya kitaalamu Tanzania. Kozi ya Solar PV imeidhinishwa na REA.", 2),
-        ("training", "Can training be delivered at our premises?", "Je, mafunzo yanaweza kutolewa kwenye majengo yetu?",
-         "Yes. We offer on-site and in-company training for organisations wishing to train groups of 10 or more staff. Contact us for a customised training proposal.",
-         "Ndiyo. Tunatoa mafunzo ya mahali pa kazi na ndani ya kampuni kwa mashirika yanayotaka kufundisha vikundi vya wafanyakazi 10 au zaidi. Wasiliana nasi kwa pendekezo la mafunzo la kibinafsi.", 3),
+        ("general", "Which regions do you work in?", "Mnafanya kazi mikoa gani?",
+         "We work across all of Tanzania Mainland; our offices are in Dar es Salaam and Dodoma.",
+         "Tunafanya kazi Tanzania Bara yote; ofisi zetu ziko Dar es Salaam na Dodoma.", 1),
+        ("general", "Is the site survey free?", "Ukaguzi wa eneo una gharama?",
+         "The initial survey within Dar es Salaam and Dodoma is free.",
+         "Ukaguzi wa awali ndani ya Dar es Salaam na Dodoma ni bure.", 2),
+        ("general", "How long does a quotation take?", "Inachukua muda gani kupata bei (quotation)?",
+         "2 to 5 days after the site survey.",
+         "Siku 2 hadi 5 baada ya ukaguzi wa eneo.", 3),
+        ("general", "Do you offer a work guarantee?", "Mnatoa dhamana ya kazi?",
+         "Yes, all our work carries a 12-month guarantee.",
+         "Ndiyo, kazi zetu zina dhamana ya miezi 12.", 4),
+        ("general", "Do you take small jobs like single-house wiring?", "Mnafanya kazi ndogo kama wiring wa nyumba moja?",
+         "Yes, we serve both small and large projects.",
+         "Ndiyo, tunahudumia kazi ndogo na kubwa.", 5),
+        ("training", "Where is the training centre?", "Mafunzo yanatolewa wapi?",
+         "At our training centre in Dar es Salaam, with practical sessions on real project sites.",
+         "Kwenye kituo chetu cha mafunzo Dar es Salaam, pamoja na mazoezi kwenye miradi halisi.", 1),
     ]
     for cat, q_en, q_sw, a_en, a_sw, sort in faqs:
         await FAQ(
@@ -1342,44 +1190,30 @@ async def seed_offices() -> None:
         Office(
             name=_t("Head Office – Dar es Salaam", "Makao Makuu – Dar es Salaam"),
             address=_t(
-                "Plot 45, Kinondoni Road, Kinondoni District, Dar es Salaam",
-                "Kiwanja Na. 45, Barabara ya Kinondoni, Wilaya ya Kinondoni, Dar es Salaam",
+                "Mikocheni B, Old Bagamoyo Road, Dar es Salaam",
+                "Mikocheni B, Barabara ya Old Bagamoyo, Dar es Salaam",
             ),
-            phone="+255 222 123 456",
-            email="dar@voltwater.co.tz",
-            hours=_t("Mon–Fri 08:00–17:00 | Sat 08:00–13:00", "Jumatatu–Ijumaa 08:00–17:00 | Jumamosi 08:00–13:00"),
+            phone="+255 700 000 001",
+            email="info@kileleengineering.co.tz",
+            hours=_t("Mon–Fri 8:00am–5:00pm; Sat 8:00am–1:00pm", "Jumatatu–Ijumaa 8:00–17:00; Jumamosi 8:00–13:00"),
             lat=-6.7924,
             lng=39.2083,
             is_head_office=True,
             sort=1,
         ),
         Office(
-            name=_t("Arusha Branch Office", "Ofisi ya Tawi la Arusha"),
+            name=_t("Branch – Dodoma", "Tawi – Dodoma"),
             address=_t(
-                "Plot 12, Sokoine Road, Arusha Central Business District, Arusha",
-                "Kiwanja Na. 12, Barabara ya Sokoine, Kituo cha Biashara cha Arusha, Arusha",
+                "Area D, Dodoma",
+                "Area D, Dodoma",
             ),
-            phone="+255 272 345 678",
-            email="arusha@voltwater.co.tz",
-            hours=_t("Mon–Fri 08:00–17:00", "Jumatatu–Ijumaa 08:00–17:00"),
-            lat=-3.3869,
-            lng=36.6830,
+            phone="+255 700 000 002",
+            email="dodoma@kileleengineering.co.tz",
+            hours=_t("Mon–Fri 8:00am–5:00pm", "Jumatatu–Ijumaa 8:00–17:00"),
+            lat=-6.1722,
+            lng=35.7395,
             is_head_office=False,
             sort=2,
-        ),
-        Office(
-            name=_t("Mwanza Liaison Office", "Ofisi ya Ufuatiliaji Mwanza"),
-            address=_t(
-                "2nd Floor, Sukuma House, Kenyatta Road, Mwanza",
-                "Ghorofa ya 2, Sukuma House, Barabara ya Kenyatta, Mwanza",
-            ),
-            phone="+255 282 456 789",
-            email="mwanza@voltwater.co.tz",
-            hours=_t("Mon–Fri 08:30–17:00", "Jumatatu–Ijumaa 08:30–17:00"),
-            lat=-2.5164,
-            lng=32.9175,
-            is_head_office=False,
-            sort=3,
         ),
     ]
     for o in offices:
