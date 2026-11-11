@@ -75,6 +75,10 @@ jobs:
             # Login to GHCR
             echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
 
+            # Ensure /opt/company-website is owned by current user
+            sudo mkdir -p /opt/company-website
+            sudo chown -R $USER:$USER /opt/company-website
+
             # Clone or pull latest code
             if [ -d /opt/company-website/.git ]; then
               cd /opt/company-website && git pull origin main
@@ -84,11 +88,12 @@ jobs:
             fi
 
             # Pull new image and restart backend + caddy
+            cd /opt/company-website
             export IMAGE_TAG=$IMAGE_TAG
             export GITHUB_REPOSITORY_OWNER=$GH_OWNER
-            docker compose -f deploy/docker-compose.prod.yml pull backend
-            docker compose -f deploy/docker-compose.prod.yml up -d backend caddy mongo
-            docker system prune -f --filter "until=24h"
+            sudo docker compose -f deploy/docker-compose.prod.yml pull backend
+            sudo docker compose -f deploy/docker-compose.prod.yml up -d backend caddy mongo
+            sudo docker system prune -f --filter "until=24h"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_ACTOR: ${{ github.actor }}
