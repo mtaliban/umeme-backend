@@ -1,0 +1,51 @@
+{
+    admin off
+}
+
+# When DOMAIN env var is set, serve HTTPS for it; otherwise HTTP on :80
+{$DOMAIN::80} {
+
+    # Redirect www → apex
+    @www host www.{$DOMAIN:}
+    redir @www https://{$DOMAIN:}{uri} permanent
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        Referrer-Policy strict-origin-when-cross-origin
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        Access-Control-Allow-Origin {$FRONTEND_ORIGIN:*}
+        Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type, Authorization"
+        -Server
+    }
+
+    # Compression
+    encode gzip zstd
+
+    # Cache uploaded media
+    @media path /media/*
+    header @media Cache-Control "public, max-age=86400"
+
+    # API → backend
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+
+    # Media files – block /media/private/*
+    handle /media/* {
+        @private path /media/private*
+        respond @private 404
+
+        uri strip_prefix /media
+        file_server {
+            root /srv/media
+        }
+    }
+
+    # Everything else → 404 (frontend lives on Vercel)
+    handle {
+        respond 404
+    }
+}
