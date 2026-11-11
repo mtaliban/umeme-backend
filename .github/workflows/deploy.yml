@@ -56,11 +56,11 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: GH_TOKEN,GH_ACTOR,IMAGE_TAG,GH_OWNER
+          envs: GH_TOKEN,GH_ACTOR,IMAGE_TAG,GH_OWNER,MONGO_ROOT_USERNAME,MONGO_ROOT_PASSWORD,JWT_SECRET,ADMIN_EMAIL,ADMIN_PASSWORD,SITE_URL,REVALIDATE_SECRET,FRONTEND_ORIGIN
           script: |
             set -e
 
-            # Install Docker if not present (use sudo for all docker commands)
+            # Install Docker if not present
             if ! command -v docker &>/dev/null; then
               curl -fsSL https://get.docker.com | sh
             fi
@@ -85,15 +85,36 @@ jobs:
               cd /opt/company-website
             fi
 
-            # Pull new image and restart backend + caddy
             cd /opt/company-website
-            export IMAGE_TAG=$IMAGE_TAG
-            export GITHUB_REPOSITORY_OWNER=$GH_OWNER
-            sudo docker compose -f deploy/docker-compose.prod.yml pull backend
-            sudo docker compose -f deploy/docker-compose.prod.yml up -d backend caddy mongo
+
+            # Write .env file from secrets
+            cat > deploy/.env <<EOF
+            GITHUB_REPOSITORY_OWNER=$GH_OWNER
+            IMAGE_TAG=$IMAGE_TAG
+            MONGO_ROOT_USERNAME=$MONGO_ROOT_USERNAME
+            MONGO_ROOT_PASSWORD=$MONGO_ROOT_PASSWORD
+            JWT_SECRET=$JWT_SECRET
+            ADMIN_EMAIL=$ADMIN_EMAIL
+            ADMIN_PASSWORD=$ADMIN_PASSWORD
+            SITE_URL=$SITE_URL
+            REVALIDATE_SECRET=$REVALIDATE_SECRET
+            FRONTEND_ORIGIN=$FRONTEND_ORIGIN
+            EOF
+
+            # Pull new image and restart backend + caddy
+            sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env pull backend
+            sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d backend caddy mongo
             sudo docker system prune -f --filter "until=24h"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_ACTOR: ${{ github.actor }}
           GH_OWNER: ${{ github.repository_owner }}
           IMAGE_TAG: ${{ github.sha }}
+          MONGO_ROOT_USERNAME: ${{ secrets.MONGO_ROOT_USERNAME }}
+          MONGO_ROOT_PASSWORD: ${{ secrets.MONGO_ROOT_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          SITE_URL: ${{ secrets.SITE_URL }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          FRONTEND_ORIGIN: ${{ secrets.FRONTEND_ORIGIN }}

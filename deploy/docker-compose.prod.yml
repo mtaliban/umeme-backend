@@ -24,7 +24,7 @@ services:
     logging: *default-logging
 
   backend:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/company-backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/umeme-backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       - MONGO_HOST=mongo
