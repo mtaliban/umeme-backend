@@ -1,0 +1,14 @@
+deploy/
+tests/
+.env
+.env.*
+*.pem
+*.key
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+.git/
+.github/
