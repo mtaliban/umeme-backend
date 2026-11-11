@@ -101,6 +101,7 @@ jobs:
 
             # Pull new image and restart backend + caddy
             sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env pull backend
+            sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env down -v 2>/dev/null || true
             sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d backend caddy mongo || true
 
             # Show backend logs if unhealthy
