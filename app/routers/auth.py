@@ -1,130 +1,65 @@
-"""Authentication endpoints."""
-from __future__ import annotations
+"""PIN login, logout na kubadilisha PIN."""
 
-import logging
-from datetime import datetime, timezone, timedelta
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel, EmailStr
+from ..auth import (
+    check_attempts,
+    client_key,
+    create_token,
+    current_shop_id,
+    hash_pin,
+    note_attempt,
+    reset_attempts,
+    verify_pin,
+)
+from ..db import db
+from ..schemas import PinChangeIn, PinIn
+from ..tz import now
 
-from app.models.activity import Activity
-from app.models.user import User
-from app.security.jwt import create_token, set_cookie, clear_cookie
-from app.security.passwords import hash_password, verify_password, MIN_PASSWORD_LENGTH
-from app.security.permissions import get_current_user
-from app.security.rate_limit import limiter
-
-logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/api/auth", tags=["auth"])
-
-LOCKOUT_ATTEMPTS = 5
-LOCKOUT_MINUTES = 15
+router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-
-class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
-
-
-async def _log_activity(user: User, action: str) -> None:
-    now = datetime.now(timezone.utc)
-    await Activity(
-        user_id=str(user.id),
-        user_name=user.name,
-        action=action,
-        collection="users",
-        item_id=str(user.id),
-        item_label=user.email,
-        at=now,
-    ).insert()
-
-
-@router.post("/login")
-@limiter.limit("10/minute")
-async def login(
-    request: Request,
-    body: LoginRequest,
-    response: Response,
-) -> dict:
-    now = datetime.now(timezone.utc)
-    user = await User.find_one(User.email == body.email)
-
-    if not user or not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-        )
-
-    # Check lockout
-    if user.locked_until and user.locked_until > now:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"Account locked until {user.locked_until.isoformat()}",
-        )
-
-    if not verify_password(body.password, user.password_hash):
-        user.failed_logins = (user.failed_logins or 0) + 1
-        if user.failed_logins >= LOCKOUT_ATTEMPTS:
-            user.locked_until = now + timedelta(minutes=LOCKOUT_MINUTES)
-            user.failed_logins = 0
-        await user.save()
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-        )
-
-    # Successful login
-    user.failed_logins = 0
-    user.locked_until = None
-    user.last_login = now
-    await user.save()
-
-    token = create_token(str(user.id), user.role)
-    set_cookie(response, token)
-
-    await _log_activity(user, "login")
-    return {"ok": True}
-
-
-@router.post("/logout")
-async def logout(response: Response) -> dict:
-    clear_cookie(response)
-    return {"ok": True}
-
-
-@router.get("/me")
-async def me(user: User = Depends(get_current_user)) -> dict:
+def shop_out(shop: dict) -> dict:
     return {
-        "id": str(user.id),
-        "name": user.name,
-        "email": user.email,
-        "role": user.role,
-        "is_active": user.is_active,
-        "last_login": user.last_login.isoformat() if user.last_login else None,
+        "id": str(shop["_id"]),
+        "name": shop.get("name", ""),
+        "phone": shop.get("phone", ""),
+        "email": shop.get("email", ""),
     }
 
 
-@router.post("/change-password")
-async def change_password(
-    body: ChangePasswordRequest,
-    user: User = Depends(get_current_user),
-) -> dict:
-    if not verify_password(body.current_password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect",
-        )
-    if len(body.new_password) < MIN_PASSWORD_LENGTH:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"New password must be at least {MIN_PASSWORD_LENGTH} characters",
-        )
-    user.password_hash = hash_password(body.new_password)
-    user.updated_at = datetime.now(timezone.utc)
-    await user.save()
+def _valid_pin(pin: str) -> bool:
+    return isinstance(pin, str) and len(pin) == 4 and pin.isdigit()
+
+
+@router.post("/pin")
+async def login(body: PinIn, request: Request):
+    key = client_key(request)
+    check_attempts(key)
+    shop = await db.shops.find_one({}, sort=[("created_at", 1)])
+    if not shop or not verify_pin(body.pin, shop.get("pin_hash", "")):
+        note_attempt(key)
+        raise HTTPException(401, "PIN si sahihi")
+    reset_attempts(key)
+    return {"token": create_token(shop["_id"]), "shop": shop_out(shop)}
+
+
+@router.post("/logout", status_code=204)
+async def logout():
+    return Response(status_code=204)
+
+
+@router.put("/pin")
+async def change_pin(body: PinChangeIn, sid=Depends(current_shop_id)):
+    shop = await db.shops.find_one({"_id": sid})
+    if not shop:
+        raise HTTPException(401, "Ingia tena")
+    if not verify_pin(body.old_pin, shop.get("pin_hash", "")):
+        raise HTTPException(400, "PIN ya zamani si sahihi")
+    if not _valid_pin(body.new_pin):
+        raise HTTPException(400, "PIN iwe tarakimu 4")
+    await db.shops.update_one(
+        {"_id": sid},
+        {"$set": {"pin_hash": hash_pin(body.new_pin), "updated_at": now()}},
+    )
     return {"ok": True}

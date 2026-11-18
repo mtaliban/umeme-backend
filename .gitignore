@@ -1,35 +1,7 @@
-# Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-.Python
-*.so
-.env
-.env.*
-venv/
-env/
 .venv/
-
-# Keys and secrets
-*.pem
-*.key
-*.p12
-*.pfx
-
-# IDE
-.vscode/
-.idea/
-*.swp
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Test/coverage
+venv/
+.env
+firebase-service-account.json
 .pytest_cache/
-.coverage
-htmlcov/
-
-# Logs
-*.log

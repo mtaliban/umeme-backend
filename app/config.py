@@ -1,50 +1,24 @@
+"""Mazingira ya app — yanasomwa kutoka .env."""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
-    # MongoDB
-    mongo_host: str = "mongo"
-    mongo_port: int = 27017
-    mongo_root_username: str
-    mongo_root_password: str
-    mongo_db: str = "company_website"
-
-    # JWT
-    jwt_secret: str
-
-    # First Super Admin
-    admin_email: str
-    admin_password: str
-
-    # SMTP
-    smtp_host: str = ""
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
-    smtp_from: str = ""
-    notify_email: str = ""
-
-    # Site
-    site_url: str = "http://localhost"
-    # URL of the Next.js frontend (for revalidation calls; set FRONTEND_URL env var to override)
-    frontend_url: str = "http://frontend:3000"
-    revalidate_secret: str = ""
-
-    # reCAPTCHA
-    recaptcha_secret: str = ""
-
-    # Uploads
-    max_upload_mb: int = 5
-
-    @property
-    def mongo_url(self) -> str:
-        return (
-            f"mongodb://{self.mongo_root_username}:{self.mongo_root_password}"
-            f"@{self.mongo_host}:{self.mongo_port}/{self.mongo_db}"
-            f"?authSource=admin"
-        )
+    mongo_url: str = "mongodb://localhost:27017"
+    db_name: str = "ummu_ayman"
+    jwt_secret: str = "badilisha-iwe-ndefu-sana-na-siri"
+    jwt_days: int = 90
+    tz_name: str = "Africa/Dar_es_Salaam"
+    firebase_credentials: str = "./firebase-service-account.json"
+    low_stock_threshold: int = 2
+    close_day_reminder: str = "21:00"
+    weekly_report_time: str = "SUN 21:30"
 
 
 settings = Settings()
