@@ -69,5 +69,11 @@ async def health():
     return {"ok": True}
 
 
+@app.get("/api/health", tags=["health"], include_in_schema=False)
+async def api_health():
+    """Alias kwa healthcheck ya docker-compose (Caddy inaondoa /api)."""
+    return {"ok": True}
+
+
 for module in (auth, me, devices, home, products, variants, daily, expenses, receipts, reports):
     app.include_router(module.router)

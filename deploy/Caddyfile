@@ -2,31 +2,50 @@
     admin off
 }
 
-# API_DOMAIN ikiwekwa (mf. api.domain.co.tz) → HTTPS otomatiki.
-# Ikikosekana → HTTP kwenye :80.
-{$API_DOMAIN::80} {
+# When DOMAIN env var is set, serve HTTPS for it; otherwise HTTP on :80
+{$DOMAIN::80} {
 
+    # Redirect www → apex
+    @www host www.{$DOMAIN:}
+    redir @www https://{$DOMAIN:}{uri} permanent
+
+    # Security headers
     header {
         X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
         Referrer-Policy strict-origin-when-cross-origin
-        Access-Control-Allow-Origin *
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
+        Access-Control-Allow-Origin {$FRONTEND_ORIGIN:*}
         Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        Access-Control-Allow-Headers "Content-Type, Authorization, X-Device-Token"
+        Access-Control-Allow-Headers "Content-Type, Authorization"
         -Server
     }
 
+    # Compression
     encode gzip zstd
 
-    @options method OPTIONS
-    respond @options 204
+    # Cache uploaded media
+    @media path /media/*
+    header @media Cache-Control "public, max-age=86400"
 
-    # Njia zote zinaendwa kama zilivyo kwenye app (mf. /auth/pin, /home).
-    # /api/... inakatwa ili app ifikie /auth/pin pia.
+    # API → backend (Caddy inaondoa /api ili routes za app zifikike)
     handle /api/* {
         uri strip_prefix /api
         reverse_proxy backend:8000
     }
 
+    # Media files – block /media/private/*
+    handle /media/* {
+        @private path /media/private*
+        respond @private 404
+
+        uri strip_prefix /media
+        file_server {
+            root /srv/media
+        }
+    }
+
+    # API nyingine zote (mf. /health, /auth/pin, /home) → backend
     handle {
         reverse_proxy backend:8000
     }

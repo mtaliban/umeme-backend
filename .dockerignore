@@ -1,15 +1,14 @@
 deploy/
 tests/
-.venv/
-venv/
 .env
 .env.*
 *.pem
 *.key
-firebase-service-account.json
 __pycache__/
 *.pyc
 .pytest_cache/
+.coverage
+htmlcov/
 *.log
 .git/
 .github/
