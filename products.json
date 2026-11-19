@@ -1,0 +1,320 @@
+[
+  {
+    "name": "Kanzu",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Alfurqan Kanzu",
+        "qty": 8,
+        "buying": 50000,
+        "selling": 65000
+      },
+      {
+        "name": "Kanzu ya Oman",
+        "qty": 6,
+        "buying": 30000,
+        "selling": 40000
+      },
+      {
+        "name": "Kanzu ya Saudia",
+        "qty": 10,
+        "buying": 10000,
+        "selling": 15000
+      },
+      {
+        "name": "Kanzu watoto",
+        "qty": 12,
+        "buying": 8000,
+        "selling": 12000
+      }
+    ]
+  },
+  {
+    "name": "Abaya",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Abaya ya Kituruki",
+        "qty": 16,
+        "buying": 5000,
+        "selling": 8000
+      },
+      {
+        "name": "Abaya nyeusi",
+        "qty": 5,
+        "buying": 7000,
+        "selling": 11000
+      },
+      {
+        "name": "Abaya ya harusi",
+        "qty": 3,
+        "buying": 40000,
+        "selling": 60000
+      },
+      {
+        "name": "Abaya Dubai",
+        "qty": 8,
+        "buying": 25000,
+        "selling": 38000
+      }
+    ]
+  },
+  {
+    "name": "Kofia",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Kofia nyeupe",
+        "qty": 8,
+        "buying": 20000,
+        "selling": 25000
+      },
+      {
+        "name": "Kofia nyeusi",
+        "qty": 6,
+        "buying": 15000,
+        "selling": 22000
+      },
+      {
+        "name": "Kofia ya bao",
+        "qty": 5,
+        "buying": 6000,
+        "selling": 10000
+      }
+    ]
+  },
+  {
+    "name": "Viatu",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Viatu vya kufunga",
+        "qty": 7,
+        "buying": 25000,
+        "selling": 35000
+      },
+      {
+        "name": "Viatu vya ngozi",
+        "qty": 4,
+        "buying": 35000,
+        "selling": 50000
+      },
+      {
+        "name": "Raba",
+        "qty": 9,
+        "buying": 18000,
+        "selling": 26000
+      }
+    ]
+  },
+  {
+    "name": "Sandals",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Sandals za ngozi",
+        "qty": 6,
+        "buying": 9000,
+        "selling": 14000
+      },
+      {
+        "name": "Sandals za wanawake",
+        "qty": 5,
+        "buying": 7000,
+        "selling": 11000
+      }
+    ]
+  },
+  {
+    "name": "Kanga",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Kanga za pwani",
+        "qty": 10,
+        "buying": 6000,
+        "selling": 9000
+      },
+      {
+        "name": "Kanga za harusi",
+        "qty": 4,
+        "buying": 15000,
+        "selling": 22000
+      }
+    ]
+  },
+  {
+    "name": "Hijab",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Hijab za chiffon",
+        "qty": 12,
+        "buying": 4000,
+        "selling": 7000
+      },
+      {
+        "name": "Hijab za jezi",
+        "qty": 9,
+        "buying": 3500,
+        "selling": 6000
+      }
+    ]
+  },
+  {
+    "name": "Baibui",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Baibui jeusi",
+        "qty": 5,
+        "buying": 18000,
+        "selling": 26000
+      },
+      {
+        "name": "Baibui la Oman",
+        "qty": 3,
+        "buying": 30000,
+        "selling": 42000
+      }
+    ]
+  },
+  {
+    "name": "Dera",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Dera la Somali",
+        "qty": 7,
+        "buying": 12000,
+        "selling": 18000
+      },
+      {
+        "name": "Dera la kawaida",
+        "qty": 6,
+        "buying": 8000,
+        "selling": 12000
+      }
+    ]
+  },
+  {
+    "name": "Jalabia",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Jalabia za kiume",
+        "qty": 4,
+        "buying": 20000,
+        "selling": 30000
+      },
+      {
+        "name": "Jalabia za kike",
+        "qty": 5,
+        "buying": 18000,
+        "selling": 27000
+      }
+    ]
+  },
+  {
+    "name": "Suruali",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Suruali za kitambaa",
+        "qty": 8,
+        "buying": 12000,
+        "selling": 18000
+      },
+      {
+        "name": "Jeans",
+        "qty": 6,
+        "buying": 15000,
+        "selling": 23000
+      }
+    ]
+  },
+  {
+    "name": "T-shirt",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "T-shirt za kawaida",
+        "qty": 10,
+        "buying": 5000,
+        "selling": 8000
+      },
+      {
+        "name": "Polo",
+        "qty": 5,
+        "buying": 9000,
+        "selling": 14000
+      }
+    ]
+  },
+  {
+    "name": "Mikoba",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Mkoba wa ngozi",
+        "qty": 3,
+        "buying": 30000,
+        "selling": 45000
+      },
+      {
+        "name": "Mkoba mdogo",
+        "qty": 4,
+        "buying": 10000,
+        "selling": 16000
+      }
+    ]
+  },
+  {
+    "name": "Manukato",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Udi",
+        "qty": 6,
+        "buying": 15000,
+        "selling": 25000
+      },
+      {
+        "name": "Marashi",
+        "qty": 9,
+        "buying": 6000,
+        "selling": 10000
+      }
+    ]
+  },
+  {
+    "name": "Tasbihi",
+    "has_types": true,
+    "variants": [
+      {
+        "name": "Tasbihi za mbao",
+        "qty": 12,
+        "buying": 2000,
+        "selling": 4000
+      },
+      {
+        "name": "Tasbihi za lulu",
+        "qty": 6,
+        "buying": 5000,
+        "selling": 9000
+      }
+    ]
+  },
+  {
+    "name": "Mafuta ya nywele",
+    "has_types": false,
+    "variants": [
+      {
+        "name": "Mafuta ya nywele",
+        "qty": 12,
+        "buying": 3000,
+        "selling": 5000
+      }
+    ]
+  }
+]
