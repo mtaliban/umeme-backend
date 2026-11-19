@@ -1,4 +1,6 @@
-"""Risiti: kuandika, kuona na kufuta."""
+"""Risiti: kuandika, kuona, kufuta na historia."""
+
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pymongo import ReturnDocument
@@ -7,31 +9,41 @@ from ..auth import current_shop_id
 from ..db import db
 from ..schemas import ReceiptIn
 from ..services import notify, stock, tx
-from ..tz import now, parse_day, today_str
+from ..tz import DAY_NAMES, MONTH_SHORT, TZ, now, parse_day, today, today_str
 
 router = APIRouter(tags=["receipts"])
 
 
+def _fmt_time(dt) -> str:
+    if not dt:
+        return ""
+    try:
+        return dt.astimezone(TZ).strftime("%H:%M")
+    except Exception:
+        return ""
+
+
 def receipt_out(receipt: dict) -> dict:
     customer = {"name": "", "phone": ""}
-    customer.update(
-        {k: v for k, v in (receipt.get("customer") or {}).items() if k != "_id"}
-    )
+    customer.update({k: v for k, v in (receipt.get("customer") or {}).items() if k != "_id"})
     items = []
     for it in receipt.get("items", []):
         qty = int(it["qty"])
         price = int(it["price"])
         discount = int(it.get("discount", 0) or 0)
+        vid = it.get("variant_id")
+        pid = it.get("product_id")
         items.append(
             {
-                "variant_id": str(it["variant_id"]),
-                "product_id": str(it["product_id"]),
+                "variant_id": str(vid) if vid else None,
+                "product_id": str(pid) if pid else None,
                 "name": it["name"],
                 "qty": qty,
                 "price": price,
                 "discount": discount,
                 "buying": int(it.get("buying", 0) or 0),
                 "amount": qty * (price - discount),
+                "out_of_stock": bool(it.get("out_of_stock")),
             }
         )
     return {
@@ -46,6 +58,8 @@ def receipt_out(receipt: dict) -> dict:
     }
 
 
+# ── GET /receipts?date= ───────────────────────────────────────────────────────
+
 @router.get("/receipts")
 async def list_receipts(date: str | None = None, sid=Depends(current_shop_id)):
     day = parse_day(date).isoformat()
@@ -55,19 +69,85 @@ async def list_receipts(date: str | None = None, sid=Depends(current_shop_id)):
     return [receipt_out(r) async for r in cursor]
 
 
+# ── GET /receipts/history ─────────────────────────────────────────────────────
+
+@router.get("/receipts/history")
+async def receipts_history(
+    q: str | None = None,
+    before: str | None = None,
+    limit: int = 50,
+    sid=Depends(current_shop_id),
+):
+    query: dict = {"shop_id": sid, "status": "paid"}
+    if before:
+        query["date"] = {"$lt": before}
+
+    if q:
+        # Tafuta kwa jina la mteja au namba ya risiti
+        import re
+        q_clean = re.escape(q.strip())
+        query["$or"] = [
+            {"customer.name": {"$regex": q_clean, "$options": "i"}},
+            {"number": {"$regex": f"^{q_clean}"}},
+        ]
+
+    cursor = db.receipts.find(query).sort([("date", -1), ("number", -1)]).limit(limit + 1)
+    receipts_list = [r async for r in cursor]
+
+    has_more = len(receipts_list) > limit
+    if has_more:
+        receipts_list = receipts_list[:limit]
+
+    # Panga kwa siku
+    days_dict: dict[str, dict] = {}
+    t = today()
+    for r in receipts_list:
+        d_str = r["date"]
+        if d_str not in days_dict:
+            d = date.fromisoformat(d_str)
+            if d == t:
+                label = f"LEO · {DAY_NAMES[d.weekday()].upper()} {d.day} {MONTH_SHORT[d.month - 1].upper()}"
+            elif d == t - timedelta(days=1):
+                label = f"JANA · {DAY_NAMES[d.weekday()].upper()} {d.day} {MONTH_SHORT[d.month - 1].upper()}"
+            else:
+                label = f"{DAY_NAMES[d.weekday()].upper()} {d.day} {MONTH_SHORT[d.month - 1].upper()}"
+            days_dict[d_str] = {"date": d_str, "label": label, "total": 0, "receipts": []}
+        paid = int((r.get("totals") or {}).get("paid", 0))
+        days_dict[d_str]["total"] += paid
+        days_dict[d_str]["receipts"].append(
+            {
+                "id": str(r["_id"]),
+                "number": r["number"],
+                "customer": {
+                    "name": (r.get("customer") or {}).get("name", ""),
+                    "phone": (r.get("customer") or {}).get("phone", ""),
+                },
+                "time": _fmt_time(r.get("created_at")),
+                "paid": paid,
+            }
+        )
+
+    days = sorted(days_dict.values(), key=lambda x: x["date"], reverse=True)
+    next_before = receipts_list[-1]["date"] if has_more and receipts_list else None
+
+    return {"days": days, "next_before": next_before}
+
+
+# ── POST /receipts ────────────────────────────────────────────────────────────
+
 async def _persist(sid, customer, items, day, session=None) -> dict:
-    """Punguza stock, chukua namba, hifadhi risiti."""
+    """Punguza stock (ya stock peke yake), chukua namba, hifadhi risiti."""
     applied: list[tuple] = []
     seq_taken = False
 
     async def rollback() -> None:
         if session is not None:
-            return  # transaction itajifuta yenyewe
+            return
         for pid, vid, qty, name, buying in reversed(applied):
+            if pid is None:
+                continue
             try:
-                await stock.return_stock(
-                    sid, pid, vid, qty, name, buying, "receipt_cancel", None, day
-                )
+                await stock.return_stock(sid, pid, vid, qty, name, buying, "receipt_cancel", None, day)
             except HTTPException:
                 continue
         if seq_taken:
@@ -75,6 +155,9 @@ async def _persist(sid, customer, items, day, session=None) -> dict:
 
     try:
         for item in items:
+            if item.get("out_of_stock"):
+                item["qty_after"] = None
+                continue
             qty_after = await stock.take_stock(
                 sid,
                 item["product_id"],
@@ -87,9 +170,7 @@ async def _persist(sid, customer, items, day, session=None) -> dict:
                 day,
                 session=session,
             )
-            applied.append(
-                (item["product_id"], item["variant_id"], item["qty"], item["name"], item["buying"])
-            )
+            applied.append((item["product_id"], item["variant_id"], item["qty"], item["name"], item["buying"]))
             item["qty_after"] = qty_after
 
         shop = await db.shops.find_one_and_update(
@@ -145,6 +226,7 @@ async def create_receipt(body: ReceiptIn, request: Request, sid=Depends(current_
     items: list[dict] = []
     needed: dict[str, int] = {}
     variants: dict[str, dict] = {}
+
     for line in body.items:
         if int(line.qty) <= 0:
             raise HTTPException(400, "Idadi iwe kubwa kuliko 0")
@@ -152,32 +234,50 @@ async def create_receipt(body: ReceiptIn, request: Request, sid=Depends(current_
             raise HTTPException(400, "Bei iwe kubwa kuliko 0")
         if int(line.discount) < 0 or int(line.discount) > int(line.price):
             raise HTTPException(400, "Punguzo si sahihi")
-        product, variant = await stock.find_variant(sid, line.variant_id)
-        vid = str(variant["_id"])
-        needed[vid] = needed.get(vid, 0) + int(line.qty)
-        variants[vid] = {
-            "product_id": product["_id"],
-            "variant_id": variant["_id"],
-            "name": variant["name"],
-            "buying": int(variant.get("buying", 0)),
-        }
-        items.append(
-            {
+
+        if line.variant_id is None:
+            # Bidhaa nje ya stock
+            name = (line.name or "").strip()
+            if not name:
+                raise HTTPException(400, "Andika jina la bidhaa")
+            items.append(
+                {
+                    "variant_id": None,
+                    "product_id": None,
+                    "name": name,
+                    "qty": int(line.qty),
+                    "price": int(line.price),
+                    "discount": int(line.discount),
+                    "buying": max(0, int(line.buying or 0)),
+                    "out_of_stock": True,
+                }
+            )
+        else:
+            product, variant = await stock.find_variant(sid, line.variant_id)
+            vid = str(variant["_id"])
+            needed[vid] = needed.get(vid, 0) + int(line.qty)
+            variants[vid] = {
                 "product_id": product["_id"],
                 "variant_id": variant["_id"],
                 "name": variant["name"],
-                "qty": int(line.qty),
-                "price": int(line.price),
-                "discount": int(line.discount),
                 "buying": int(variant.get("buying", 0)),
             }
-        )
+            items.append(
+                {
+                    "product_id": product["_id"],
+                    "variant_id": variant["_id"],
+                    "name": variant["name"],
+                    "qty": int(line.qty),
+                    "price": int(line.price),
+                    "discount": int(line.discount),
+                    "buying": int(variant.get("buying", 0)),
+                    "out_of_stock": False,
+                }
+            )
 
-    # Hakikisha stock inatosha kwa yote kwanza — hakuna kinachobadilika.
+    # Hakikisha stock inatosha kwa zote kwanza
     for vid, qty in needed.items():
-        current = await stock.variant_qty(
-            sid, variants[vid]["product_id"], variants[vid]["variant_id"]
-        )
+        current = await stock.variant_qty(sid, variants[vid]["product_id"], variants[vid]["variant_id"])
         if current < qty:
             raise HTTPException(400, f"{variants[vid]['name']}: zipo {current} tu")
 
@@ -198,10 +298,14 @@ async def create_receipt(body: ReceiptIn, request: Request, sid=Depends(current_
         exclude=device_token,
     )
     for item in items:
-        await stock.check_stock(sid, item["name"], int(item.get("qty_after", 0)))
+        qa = item.get("qty_after")
+        if qa is not None:
+            await stock.check_stock(sid, item["name"], int(qa))
 
     return receipt_out(receipt)
 
+
+# ── GET /receipts/{id} ────────────────────────────────────────────────────────
 
 @router.get("/receipts/{receipt_id}")
 async def get_receipt(receipt_id: str, sid=Depends(current_shop_id)):
@@ -212,27 +316,25 @@ async def get_receipt(receipt_id: str, sid=Depends(current_shop_id)):
     return receipt_out(receipt)
 
 
+# ── POST /receipts/{id}/cancel ────────────────────────────────────────────────
+
 async def _cancel(sid, receipt, rid, day, session=None) -> None:
     for item in receipt.get("items", []):
+        if bool(item.get("out_of_stock")):
+            continue
         qty = int(item.get("qty", 0))
         if qty <= 0:
             continue
-        exists = await db.products.find_one(
-            {"_id": item["product_id"], "shop_id": sid}, {"_id": 1}, session=session
-        )
+        pid = item.get("product_id")
+        vid = item.get("variant_id")
+        if not pid or not vid:
+            continue
+        exists = await db.products.find_one({"_id": pid, "shop_id": sid}, {"_id": 1}, session=session)
         if not exists:
             continue
         await stock.return_stock(
-            sid,
-            item["product_id"],
-            item["variant_id"],
-            qty,
-            item["name"],
-            item.get("buying", 0),
-            "receipt_cancel",
-            rid,
-            day,
-            session=session,
+            sid, pid, vid, qty, item["name"], item.get("buying", 0),
+            "receipt_cancel", rid, day, session=session,
         )
     await db.receipts.update_one(
         {"_id": rid},

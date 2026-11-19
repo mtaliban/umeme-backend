@@ -18,8 +18,6 @@ class DeviceIn(BaseModel):
 
 
 class ProductIn(BaseModel):
-    """Fields za ziada (mf. supplier, note) zinahifadhiwa kama zilivyo."""
-
     model_config = ConfigDict(extra="allow")
 
     name: str
@@ -49,6 +47,8 @@ class VariantPatch(BaseModel):
     name: str | None = None
 
 
+# ── Daily (PUT bulk — backward compat) ───────────────────────────────────────
+
 class DailyLineIn(BaseModel):
     variant_id: str
     qty: int
@@ -60,9 +60,41 @@ class DailyIn(BaseModel):
     expenses: list[dict] = []
 
 
-class CustomerIn(BaseModel):
-    """Maelezo ya mteja yanaweza kuwa na fields zozote za ziada."""
+# ── Daily (per-line API) ──────────────────────────────────────────────────────
 
+class DailyLineAdd(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    variant_id: str | None = None   # None = nje ya stock
+    name: str | None = None         # lazima kama variant_id ni None
+    qty: int = 1
+    selling: int = 0
+    buying: int = 0                 # lazima kama variant_id ni None
+
+
+class DailyLineEdit(BaseModel):
+    qty: int | None = None
+    selling: int | None = None
+    buying: int | None = None       # kwa nje ya stock peke yake
+
+
+class DailyExpenseAdd(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    name: str
+    amount: int
+
+
+class DailyExpenseEdit(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    name: str | None = None
+    amount: int | None = None
+
+
+# ── Receipts ──────────────────────────────────────────────────────────────────
+
+class CustomerIn(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     name: str = ""
@@ -70,10 +102,14 @@ class CustomerIn(BaseModel):
 
 
 class ReceiptItemIn(BaseModel):
-    variant_id: str
-    qty: int
-    price: int
+    model_config = ConfigDict(extra="allow")
+
+    variant_id: str | None = None   # None = nje ya stock
+    name: str | None = None         # lazima kama variant_id ni None
+    qty: int = 1
+    price: int = 0
     discount: int = 0
+    buying: int = 0                 # lazima kama variant_id ni None
 
 
 class ReceiptIn(BaseModel):
