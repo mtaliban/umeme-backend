@@ -1,6 +1,6 @@
 """Miundo ya maombi (Pydantic v2)."""
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PinIn(BaseModel):
@@ -67,9 +67,9 @@ class DailyLineAdd(BaseModel):
 
     variant_id: str | None = None   # None = nje ya stock
     name: str | None = None         # lazima kama variant_id ni None
-    qty: int = 1
-    selling: int = 0
-    buying: int = 0                 # lazima kama variant_id ni None
+    qty: int | None = None          # lazima
+    selling: int | None = None      # lazima
+    buying: int | None = None       # lazima kama variant_id ni None
 
 
 class DailyLineEdit(BaseModel):
@@ -81,8 +81,8 @@ class DailyLineEdit(BaseModel):
 class DailyExpenseAdd(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    name: str
-    amount: int
+    name: str | None = None
+    amount: int | None = None
 
 
 class DailyExpenseEdit(BaseModel):
@@ -109,9 +109,12 @@ class ReceiptItemIn(BaseModel):
     qty: int = 1
     price: int = 0
     discount: int = 0
-    buying: int = 0                 # lazima kama variant_id ni None
+    buying: int | None = None        # lazima kama variant_id ni None
 
 
 class ReceiptIn(BaseModel):
-    customer: CustomerIn
-    items: list[ReceiptItemIn]
+    model_config = ConfigDict(extra="allow")
+
+    date: str | None = None          # None = leo; server inakataa siku ijayo
+    customer: CustomerIn = Field(default_factory=CustomerIn)
+    items: list[ReceiptItemIn] = Field(default_factory=list)

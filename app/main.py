@@ -22,6 +22,7 @@ from .routers import (
     products,
     receipts,
     reports,
+    stock,
     test_reset,
     variants,
 )
@@ -78,7 +79,20 @@ async def api_health():
     return {"ok": True}
 
 
-for module in (auth, me, devices, home, products, variants, daily, expenses, receipts, reports, test_reset):
+for module in (
+    auth,
+    me,
+    devices,
+    home,
+    products,
+    stock,
+    variants,
+    daily,
+    expenses,
+    receipts,
+    reports,
+    test_reset,
+):
     app.include_router(module.router)
 
 

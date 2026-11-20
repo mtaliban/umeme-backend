@@ -6,7 +6,6 @@ os.environ.setdefault("MONGO_URL", "mongodb://localhost:27017")
 os.environ["DB_NAME"] = "ummu_ayman_test"
 os.environ["JWT_SECRET"] = "test-secret-ndefu-sana-kwa-majaribio"
 
-import asyncio  # noqa: E402
 from datetime import date  # noqa: E402
 
 import pytest  # noqa: E402
@@ -16,15 +15,7 @@ from app import auth as auth_mod  # noqa: E402
 from app.auth import hash_pin  # noqa: E402
 from app.db import create_indexes, db  # noqa: E402
 from app.main import app  # noqa: E402
-from app.tz import DAY_NAMES, now, today  # noqa: E402
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Motor client ni ya module moja — majaribio yote yatumie loop moja."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+from app.tz import DAY_NAMES, DAY_SHORT, now, today  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -163,7 +154,8 @@ async def test_restock_variant(client, headers):
     movement = await db.stock_movements.find_one(
         {"variant_id": __import__("bson").ObjectId(alfurqan["id"]), "reason": "restock"}
     )
-    assert movement is not None and movement["change"] == 10
+    assert movement is not None and movement["delta"] == 10
+    assert "line_id" in movement
 
 
 async def test_receipt_number_totals_and_stock(client, headers):
@@ -182,14 +174,17 @@ async def test_receipt_number_totals_and_stock(client, headers):
     assert res.status_code == 201, res.text
     receipt = res.json()
     assert receipt["number"] == "0001"
-    assert receipt["totals"]["paid"] == 142000
-    assert receipt["totals"]["qty"] == 3
-    assert receipt["status"] == "paid"
+    assert receipt["gross"] == 152000
+    assert receipt["discount"] == 10000
+    assert receipt["paid"] == 142000
+    assert receipt["items"][0]["amount"] == 120000
+    assert receipt["customer"]["name"] == "Said Hamad"
+    assert receipt["shop"]["name"] == "UMMU AYMAN OUTFITS"
     assert await stock_qty(client, headers, product["id"], alfurqan["id"]) == 4
     assert await stock_qty(client, headers, product["id"], oman["id"]) == 5
 
 
-async def test_receipt_without_stock_changes_nothing(client, headers):
+async def test_receipt_with_short_stock_takes_what_exists(client, headers):
     product, alfurqan, _ = await make_kanzu(client, headers)
     shop_before = await db.shops.find_one({})
     res = await client.post(
@@ -200,12 +195,17 @@ async def test_receipt_without_stock_changes_nothing(client, headers):
         },
         headers=headers,
     )
-    assert res.status_code == 400
-    assert "zipo 6 tu" in res.json()["detail"]
-    assert await stock_qty(client, headers, product["id"], alfurqan["id"]) == 6
+    assert res.status_code == 201, res.text
+    from bson import ObjectId
+
+    item = res.json()["items"][0]
+    assert item["qty"] == 99
+    saved = await db.receipts.find_one({"_id": ObjectId(res.json()["id"])})
+    assert saved["items"][0]["stock_taken"] == 6
+    assert await stock_qty(client, headers, product["id"], alfurqan["id"]) == 0
     shop_after = await db.shops.find_one({})
-    assert shop_after["receipt_seq"] == shop_before["receipt_seq"]
-    assert await db.receipts.count_documents({}) == 0
+    assert shop_after["receipt_seq"] == shop_before["receipt_seq"] + 1
+    assert await db.receipts.count_documents({}) == 1
 
 
 async def test_daily_shows_receipt_lines(client, headers):
@@ -308,14 +308,14 @@ async def test_home_sold_today(client, headers):
     res = await client.get("/home", headers=headers)
     assert res.status_code == 200, res.text
     data = res.json()
-    sold = data["sold_today"]
-    assert len(sold) == 1
-    assert sold[0]["qty"] == 3
+    assert data["day"] == day
     assert data["summary"]["sales"] == 185000
-    variant = next(v for p in data["products"] for v in p["variants"] if v["id"] == alfurqan["id"])
-    assert variant["sold_today"] == 3
-    assert variant["profit_today"] == 35000
-    assert variant["qty"] == 3
+    top = data["top"]
+    assert len(top) == 1
+    assert top[0]["name"] == "Alfurqan Kanzu"
+    assert top[0]["qty"] == 3
+    assert top[0]["sales"] == 185000
+    assert top[0]["profit"] == 35000
 
 
 async def test_cancel_receipt_returns_stock(client, headers):
@@ -335,7 +335,7 @@ async def test_cancel_receipt_returns_stock(client, headers):
     res = await client.post(f"/receipts/{receipt['id']}/cancel", headers=headers)
     assert res.status_code == 200 and res.json()["ok"] is True
     assert await stock_qty(client, headers, product["id"], alfurqan["id"]) == 6
-    assert (await client.get("/receipts", headers=headers)).json() == []
+    assert (await client.get("/receipts", headers=headers)).json()["receipts"] == []
     assert (await client.get(f"/reports/day/{today().isoformat()}", headers=headers)).json()["summary"]["sales"] == 0
 
 
@@ -352,22 +352,28 @@ async def test_week_report(client, headers):
     res = await client.get("/reports/week", headers=headers)
     assert res.status_code == 200, res.text
     data = res.json()
-    assert len(data["rows"]) == today().weekday() + 1
-    assert all(row["key"] <= today().isoformat() for row in data["rows"])
-    assert sum(row["sales"] for row in data["rows"]) == data["summary"]["sales"] == 120000
-    assert sum(row["net"] for row in data["rows"]) == data["summary"]["net"]
-    assert [row["short"] for row in data["rows"]][0] == "Jtt"
+    assert data["period"] == "week"
+    assert data["summary"]["sales"] == 120000
+    assert data["summary"]["net"] == 20000
+    assert len(data["bars"]) == 7
+    bar = next(b for b in data["bars"] if b["key"] == today().isoformat())
+    assert bar["label"] == DAY_SHORT[today().weekday()]
+    assert bar["net"] == 20000
+    assert data["top"][0]["name"] == "Alfurqan Kanzu"
 
 
 async def test_month_and_year_rows(client, headers):
     month = (await client.get("/reports/month", headers=headers)).json()
-    expected = min((today().day - 1) // 7 + 1, 5)
-    assert len(month["rows"]) == expected
-    assert month["rows"][0]["label"] == "Wiki 1"
+    assert month["period"] == "month"
+    assert month["bars"][0]["label"].startswith("1")
+    assert month["bars"][0]["key"] == f"{today().year}-{today().month:02d}-01"
+    assert "weeks" not in month
 
     year = (await client.get("/reports/year", headers=headers)).json()
-    assert len(year["rows"]) == today().month
-    assert year["rows"][-1]["current"] is True
+    assert year["period"] == "year"
+    assert len(year["bars"]) == 12
+    assert year["bars"][today().month - 1]["key"] == f"{today().year}-{today().month:02d}-01"
+    assert all(bar["net"] is None for bar in year["bars"][today().month:])
 
 
 async def test_day_report(client, headers):
@@ -386,8 +392,11 @@ async def test_day_report(client, headers):
     assert report["summary"] == home["summary"]
     assert report["date"] == day
     assert report["label"].startswith(DAY_NAMES[today().weekday()])
-    assert report["items"][0]["name"] == "Alfurqan Kanzu"
-    assert report["items"][0]["profit"] == 10000
+    assert report["products"][0]["name"] == "Alfurqan Kanzu"
+    assert report["products"][0]["profit"] == 10000
+    assert report["totals"]["qty"] == 1
+    assert report["has_next"] is False
+    assert "receipts" not in report
 
 
 async def test_delete_last_variant_deletes_product(client, headers):
@@ -494,7 +503,7 @@ async def test_validation_error_detail_is_string(client, headers):
     assert res.json()["detail"].startswith("name:")
 
 
-async def test_stock_never_negative(client, headers):
+async def test_stock_shortfall_is_recorded(client, headers):
     product, alfurqan, _ = await make_kanzu(client, headers)
     day = today().isoformat()
     res = await client.put(
@@ -502,6 +511,9 @@ async def test_stock_never_negative(client, headers):
         json={"lines": [{"variant_id": alfurqan["id"], "qty": 9, "selling": 65000}], "expenses": []},
         headers=headers,
     )
-    assert res.status_code == 400
-    assert await stock_qty(client, headers, product["id"], alfurqan["id"]) == 6
-    assert await db.daily_sheets.count_documents({}) == 0
+    assert res.status_code == 200, res.text
+    assert await stock_qty(client, headers, product["id"], alfurqan["id"]) == 0
+    sheet = await db.daily_sheets.find_one({})
+    assert sheet is not None
+    assert sheet["lines"][0]["qty"] == 9
+    assert sheet["lines"][0]["stock_taken"] == 6

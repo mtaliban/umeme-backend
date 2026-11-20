@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import current_shop_id
 from ..db import db
+from ..services.summary import LIVE
 from ..tz import parse_day
 
 router = APIRouter(tags=["test"])
@@ -30,7 +31,8 @@ async def _restore_stock(sid, items: list[dict]) -> dict[str, int]:
         vid = it.get("variant_id")
         if not pid or not vid:
             continue
-        totals[(pid, vid)] += int(it.get("qty", 0))
+        taken = it.get("stock_taken")
+        totals[(pid, vid)] += int(taken if taken is not None else it.get("qty", 0))
 
     restored: dict[str, int] = {}
     for (pid, vid), qty in totals.items():
@@ -50,7 +52,7 @@ async def delete_test_day(date: str, sid=Depends(current_shop_id)):
     day_str = parse_day(date).isoformat()
 
     items: list[dict] = []
-    async for r in db.receipts.find({"shop_id": sid, "date": day_str, "status": "paid"}):
+    async for r in db.receipts.find({"shop_id": sid, "date": day_str, **LIVE}):
         items.extend(r.get("items", []))
     sheet = await db.daily_sheets.find_one({"shop_id": sid, "date": day_str})
     if sheet:
@@ -72,7 +74,7 @@ async def delete_test_sales(sid=Depends(current_shop_id)):
     _check()
 
     items: list[dict] = []
-    async for r in db.receipts.find({"shop_id": sid, "status": "paid"}):
+    async for r in db.receipts.find({"shop_id": sid, **LIVE}):
         items.extend(r.get("items", []))
     async for sheet in db.daily_sheets.find({"shop_id": sid}):
         items.extend(sheet.get("lines", []))

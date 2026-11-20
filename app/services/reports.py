@@ -1,441 +1,251 @@
-"""Ripoti za wiki, mwezi, mwaka na siku."""
+"""Ripoti (P1–P4) — JSON kamili ya UMMU-RIPOTI (Siku · Wiki · Mwezi · Mwaka)."""
 
 from collections import defaultdict
 from datetime import date, timedelta
 
 from ..db import db
-from ..tz import DAY_NAMES, DAY_SHORT, MONTH_NAMES, MONTH_SHORT, TZ, month_end, today
+from ..tz import DAY_NAMES, DAY_SHORT, MONTH_NAMES, MONTH_SHORT, month_end, today
+
+# Risiti zisizofutwa (status au cancelled)
+LIVE_RECEIPT = {"status": {"$ne": "cancelled"}, "cancelled": {"$ne": True}}
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _add(bucket: dict, key: str, name: str, qty: int, revenue: int, cost: int) -> None:
-    item = bucket.setdefault(key, {"name": name, "qty": 0, "revenue": 0, "cost": 0})
-    item["qty"] += int(qty)
-    item["revenue"] += int(revenue)
-    item["cost"] += int(cost)
+def _iso(d: date) -> str:
+    return d.isoformat()
 
 
-def _stats(receipts: list[dict], sheets: list[dict]) -> tuple[dict, dict]:
-    out = {"sales": 0, "capital": 0, "expenses": 0}
-    items: dict[str, dict] = {}
-    for r in receipts:
-        totals = r.get("totals") or {}
-        out["sales"] += int(totals.get("paid", 0))
-        out["capital"] += int(totals.get("capital", 0))
-        for it in r.get("items", []):
-            qty = int(it["qty"])
-            unit = int(it["price"]) - int(it.get("discount", 0) or 0)
-            cost = qty * int(it.get("buying", 0) or 0)
-            key = str(it.get("variant_id") or it.get("name", ""))
-            _add(items, key, it["name"], qty, qty * unit, cost)
-    for s in sheets:
-        for line in s.get("lines", []):
-            qty = int(line["qty"])
-            rev = qty * int(line["selling"])
-            cost = qty * int(line.get("buying", 0) or 0)
-            key = str(line.get("variant_id") or line.get("name", ""))
-            _add(items, key, line["name"], qty, rev, cost)
-            out["sales"] += rev
-            out["capital"] += cost
-        out["expenses"] += sum(int(e.get("amount", 0) or 0) for e in s.get("expenses", []))
-    return out, items
+def _week_start(d: date) -> date:
+    """Jumapili ndio mwanzo wa wiki."""
+    return d - timedelta(days=(d.weekday() + 1) % 7)
 
 
-def _summary(stats: dict) -> dict:
-    return {
-        "sales": stats["sales"],
-        "capital": stats["capital"],
-        "expenses": stats["expenses"],
-        "product_profit": stats["sales"] - stats["capital"],
-        "net": stats["sales"] - stats["capital"] - stats["expenses"],
-    }
+async def _rows(sid, start: str, end: str) -> tuple[list[tuple], dict[str, int]]:
+    """Mistari yote ya mauzo kati ya tarehe (pamoja) + gharama kwa siku."""
+    out: list[tuple] = []
+    expenses: dict[str, int] = defaultdict(int)
 
-
-def _top_low(items: dict, n: int = 3) -> tuple[list, list]:
-    sold = sorted(items.values(), key=lambda x: (-x["qty"], x["name"]))
-    top_raw = sold[:n]
-    top_keys = {id(t) for t in top_raw}
-    low_pool = [s for s in sold if id(s) not in top_keys]
-    low_raw = sorted(low_pool, key=lambda x: (x["qty"], x["name"]))[:n]
-
-    def _fmt(v: dict) -> dict:
-        return {
-            "name": v["name"],
-            "qty": v["qty"],
-            "sales": v["revenue"],
-            "capital": v["cost"],
-            "profit": v["revenue"] - v["cost"],
-        }
-
-    return [_fmt(t) for t in top_raw], [_fmt(t) for t in low_raw]
-
-
-def _expenses_grouped(sheets: list[dict]) -> list[dict]:
-    bucket: dict[str, int] = {}
-    for s in sheets:
-        for e in s.get("expenses", []):
-            name = str(e.get("name", "") or "").strip()
-            if name:
-                bucket[name] = bucket.get(name, 0) + int(e.get("amount", 0) or 0)
-    return [{"name": k, "amount": v} for k, v in sorted(bucket.items())]
-
-
-async def _capital_in_shop(sid) -> int:
-    total = 0
-    async for p in db.products.find({"shop_id": sid}):
-        for v in p.get("variants", []):
-            total += int(v.get("qty", 0)) * int(v.get("buying", 0))
-    return total
-
-
-async def _purchases(sid, start: str, end: str) -> int:
-    pipeline = [
-        {
-            "$match": {
-                "shop_id": sid,
-                "date": {"$gte": start, "$lte": end},
-                "reason": {"$in": ["new", "restock"]},
-                "change": {"$gt": 0},
-            }
-        },
-        {"$group": {"_id": None, "total": {"$sum": {"$multiply": ["$change", {"$ifNull": ["$buying", 0]}]}}}},
-    ]
-    async for doc in db.stock_movements.aggregate(pipeline):
-        return int(doc.get("total", 0) or 0)
-    return 0
-
-
-async def _unsold(sid, items: dict) -> list[dict]:
-    out = []
-    async for p in db.products.find({"shop_id": sid}):
-        for v in p.get("variants", []):
-            key = str(v["_id"])
-            if key not in items and int(v.get("qty", 0)) > 0:
-                out.append({"name": v["name"], "qty": int(v.get("qty", 0))})
-    out.sort(key=lambda x: (-x["qty"], x["name"]))
-    return out[:5]
-
-
-def _fmt_time(dt) -> str:
-    if not dt:
-        return ""
-    try:
-        return dt.astimezone(TZ).strftime("%H:%M")
-    except Exception:
-        return ""
-
-
-# ── Week rows (Jumatatu–Jumapili) ─────────────────────────────────────────────
-
-def _week_days(anchor: date) -> list[dict]:
-    t = today()
-    start = anchor - timedelta(days=anchor.weekday())
-    days = []
-    for i in range(7):
-        d = start + timedelta(days=i)
-        if d > t:
-            break
-        days.append({"key": d.isoformat(), "label": DAY_SHORT[d.weekday()], "date": d})
-    return days
-
-
-# ── Month: calendar weeks cut by month boundaries ────────────────────────────
-
-def _month_weeks(anchor: date) -> list[dict]:
-    """Wiki za mwezi kwa tarehe halisi za Jumatatu–Jumapili zilizokatwa na mipaka ya mwezi."""
-    t = today()
-    year, month = anchor.year, anchor.month
-    first = date(year, month, 1)
-    last = month_end(year, month)
-
-    weeks = []
-    # Anza Jumatatu ya wiki ya kwanza
-    cur = first - timedelta(days=first.weekday())
-    week_num = 0
-    while cur <= last:
-        w_start = max(cur, first)
-        w_end = min(cur + timedelta(days=6), last)
-        if w_end >= first and w_start <= t:
-            actual_end = min(w_end, t)
-            week_num += 1
-            weeks.append(
-                {
-                    "key": w_start.isoformat(),
-                    "start": w_start,
-                    "end": actual_end,
-                    "full_end": w_end,
-                    "week_num": week_num,
-                    "current": w_start <= t <= w_end,
-                }
-            )
-        cur += timedelta(days=7)
-    return weeks
-
-
-# ── Year rows (Jan–current) ───────────────────────────────────────────────────
-
-def _year_months(anchor: date) -> list[dict]:
-    t = today()
-    last = t.month if anchor.year == t.year else 12
-    months = []
-    for m in range(1, last + 1):
-        s = date(anchor.year, m, 1)
-        e = min(date(anchor.year, m, month_end(anchor.year, m).day), t)
-        months.append(
-            {
-                "key": f"{anchor.year}-{m:02d}",
-                "label": MONTH_SHORT[m - 1],
-                "start": s,
-                "end": e,
-                "current": s <= t <= date(anchor.year, m, month_end(anchor.year, m).day),
-                "net_null": False,
-            }
-        )
-    # Miezi ijayo ya mwaka huo inaonekana na net: null
-    if anchor.year == t.year:
-        for m in range(t.month + 1, 13):
-            s = date(anchor.year, m, 1)
-            months.append(
-                {
-                    "key": f"{anchor.year}-{m:02d}",
-                    "label": MONTH_SHORT[m - 1],
-                    "start": s,
-                    "end": s,
-                    "current": False,
-                    "net_null": True,
-                }
-            )
-    return months
-
-
-# ── Period label ──────────────────────────────────────────────────────────────
-
-def _period_label(period: str, anchor: date) -> str:
-    if period == "week":
-        start = anchor - timedelta(days=anchor.weekday())
-        end = start + timedelta(days=6)
-        if start.month == end.month:
-            return f"{start.day} – {end.day} {MONTH_NAMES[end.month - 1]} {end.year}"
-        return (
-            f"{start.day} {MONTH_NAMES[start.month - 1]} – "
-            f"{end.day} {MONTH_NAMES[end.month - 1]} {end.year}"
-        )
-    if period == "month":
-        return f"{MONTH_NAMES[anchor.month - 1]} {anchor.year}"
-    if period == "year":
-        return str(anchor.year)
-    return f"{DAY_NAMES[anchor.weekday()]}, {anchor.day} {MONTH_NAMES[anchor.month - 1]} {anchor.year}"
-
-
-# ── has_prev / has_next ───────────────────────────────────────────────────────
-
-def _has_next(period: str, anchor: date) -> bool:
-    t = today()
-    if period == "week":
-        start = anchor - timedelta(days=anchor.weekday())
-        return start + timedelta(days=7) <= t
-    if period == "month":
-        nxt = date(anchor.year + 1 if anchor.month == 12 else anchor.year, (anchor.month % 12) + 1, 1)
-        return nxt <= t
-    if period == "year":
-        return date(anchor.year + 1, 1, 1) <= t
-    return anchor + timedelta(days=1) <= t
-
-
-def _period_start_end(period: str, anchor: date) -> tuple[date, date]:
-    t = today()
-    if period == "week":
-        start = anchor - timedelta(days=anchor.weekday())
-        end = start + timedelta(days=6)
-        return start, end
-    if period == "month":
-        start = date(anchor.year, anchor.month, 1)
-        end = month_end(anchor.year, anchor.month)
-        return start, end
-    if period == "year":
-        return date(anchor.year, 1, 1), date(anchor.year, 12, 31)
-    return anchor, anchor
-
-
-# ── build_report ──────────────────────────────────────────────────────────────
-
-async def build_report(sid, period: str, anchor: date) -> dict:
-    t = today()
-    p_start, p_end = _period_start_end(period, anchor)
-    fetch_start = p_start.isoformat()
-    fetch_end = min(p_end, t).isoformat()
-
-    by_receipt: dict[str, list[dict]] = defaultdict(list)
-    by_sheet: dict[str, list[dict]] = defaultdict(list)
-
-    async for r in db.receipts.find(
-        {"shop_id": sid, "status": "paid", "date": {"$gte": fetch_start, "$lte": fetch_end}}
+    async for sheet in db.daily_sheets.find(
+        {"shop_id": sid, "date": {"$gte": start, "$lte": end}}
     ):
-        by_receipt[r["date"]].append(r)
-    async for s in db.daily_sheets.find(
-        {"shop_id": sid, "date": {"$gte": fetch_start, "$lte": fetch_end}}
-    ):
-        by_sheet[s["date"]].append(s)
-
-    all_receipts: list[dict] = [r for rs in by_receipt.values() for r in rs]
-    all_sheets: list[dict] = [s for ss in by_sheet.values() for s in ss]
-
-    total = {"sales": 0, "capital": 0, "expenses": 0}
-    bars: list[dict] = []
-    weeks_out: list[dict] = []
-
-    if period == "week":
-        for meta in _week_days(anchor):
-            d = meta["date"]
-            key = d.isoformat()
-            r_list = by_receipt.get(key, [])
-            s_list = by_sheet.get(key, [])
-            stats, _ = _stats(r_list, s_list)
-            net = stats["sales"] - stats["capital"] - stats["expenses"]
-            # Wiki: siku zenye biashara tu
-            if stats["sales"] > 0 or stats["expenses"] > 0:
-                bars.append({"key": key, "label": meta["label"], "net": net})
-            for k in total:
-                total[k] += stats[k]
-
-    elif period == "month":
-        for meta in _month_weeks(anchor):
-            w_start = meta["start"]
-            w_end = meta["end"]
-            r_list: list[dict] = []
-            s_list: list[dict] = []
-            d = w_start
-            while d <= w_end:
-                r_list.extend(by_receipt.get(d.isoformat(), []))
-                s_list.extend(by_sheet.get(d.isoformat(), []))
-                d += timedelta(days=1)
-            stats, _ = _stats(r_list, s_list)
-            net = stats["sales"] - stats["capital"] - stats["expenses"]
-            for k in total:
-                total[k] += stats[k]
-
-            w_num = meta["week_num"]
-            is_current = meta["current"]
-            full_end = meta["full_end"]
-            if is_current and full_end > t:
-                sub = "Wiki hii · inaendelea"
-            else:
-                sub = f"Wiki {w_num}"
-
-            full_start = meta["start"]
-            full_end_str = meta["full_end"]
-            if full_start.month == full_end_str.month:
-                range_label = f"{full_start.day} – {full_end_str.day} {MONTH_SHORT[full_start.month - 1]}"
-            else:
-                range_label = (
-                    f"{full_start.day} {MONTH_SHORT[full_start.month - 1]} – "
-                    f"{full_end_str.day} {MONTH_SHORT[full_end_str.month - 1]}"
+        day = sheet["date"]
+        for line in sheet.get("lines", []):
+            vid = line.get("variant_id")
+            out.append(
+                (
+                    day,
+                    line["name"],
+                    str(vid) if vid else None,
+                    int(line["qty"]),
+                    int(line["selling"]),
+                    int(line.get("buying", 0) or 0),
                 )
-            bar = {"key": meta["key"], "label": f"W{w_num}", "net": net}
-            bars.append(bar)
-            weeks_out.append(
-                {
-                    "start": full_start.isoformat(),
-                    "end": full_end_str.isoformat(),
-                    "label": range_label,
-                    "sub": sub,
-                    "net": net,
-                }
             )
-        # Mpya kwanza
-        weeks_out = list(reversed(weeks_out))
+        expenses[day] += sum(int(e.get("amount", 0) or 0) for e in sheet.get("expenses", []))
 
-    else:  # year
-        for meta in _year_months(anchor):
-            if meta["net_null"]:
-                bars.append({"key": meta["key"], "label": meta["label"], "net": None})
-                continue
-            w_start = meta["start"]
-            w_end = meta["end"]
-            r_list = []
-            s_list = []
-            d = w_start
-            while d <= w_end:
-                r_list.extend(by_receipt.get(d.isoformat(), []))
-                s_list.extend(by_sheet.get(d.isoformat(), []))
-                d += timedelta(days=1)
-            stats, _ = _stats(r_list, s_list)
-            net = stats["sales"] - stats["capital"] - stats["expenses"]
-            for k in total:
-                total[k] += stats[k]
-            bars.append({"key": meta["key"], "label": meta["label"], "net": net})
+    async for receipt in db.receipts.find(
+        {"shop_id": sid, "date": {"$gte": start, "$lte": end}, **LIVE_RECEIPT}
+    ):
+        day = receipt["date"]
+        for item in receipt.get("items", []):
+            vid = item.get("variant_id")
+            out.append(
+                (
+                    day,
+                    item["name"],
+                    str(vid) if vid else None,
+                    int(item["qty"]),
+                    int(item["price"]) - int(item.get("discount", 0) or 0),
+                    int(item.get("buying", 0) or 0),
+                )
+            )
 
-    _, items = _stats(all_receipts, all_sheets)
-    top, low = _top_low(items)
-    unsold = await _unsold(sid, items)
-    cap = await _capital_in_shop(sid)
-    purch = await _purchases(sid, fetch_start, fetch_end)
-    exp_grouped = _expenses_grouped(all_sheets)
+    return out, dict(expenses)
 
+
+def _summary(rows: list[tuple], expenses: int) -> dict:
+    sales = sum(qty * selling for _, _, _, qty, selling, _ in rows)
+    capital = sum(qty * buying for _, _, _, qty, _, buying in rows)
     return {
-        "period": period,
-        "label": _period_label(period, anchor),
-        "start": p_start.isoformat(),
-        "end": p_end.isoformat(),
-        "has_prev": True,
-        "has_next": _has_next(period, anchor),
-        "summary": _summary(total),
-        "bars": bars,
-        "top": top,
-        "low": low,
-        "expenses": exp_grouped,
-        "receipts": [],
-        "weeks": weeks_out,
-        "unsold": unsold,
-        "capital_in_shop": cap,
-        "purchases": purch,
+        "sales": sales,
+        "capital": capital,
+        "expenses": int(expenses),
+        "product_profit": sales - capital,
+        "net": sales - capital - int(expenses),
     }
 
 
-# ── build_day ─────────────────────────────────────────────────────────────────
+def _by_name(rows: list[tuple]) -> list[dict]:
+    """Bidhaa zinaunganishwa kwa jina; qty kubwa kwanza (zikilingana: sales)."""
+    bucket: dict[str, dict] = {}
+    for _, name, _, qty, selling, buying in rows:
+        item = bucket.setdefault(name, {"name": name, "qty": 0, "sales": 0, "capital": 0})
+        item["qty"] += qty
+        item["sales"] += qty * selling
+        item["capital"] += qty * buying
+    for item in bucket.values():
+        item["profit"] = item["sales"] - item["capital"]
+    return sorted(bucket.values(), key=lambda p: (-p["qty"], -p["sales"]))
+
+
+async def _has_data_before(sid, day: date) -> bool:
+    before = {"$lt": _iso(day)}
+    if await db.daily_sheets.find_one({"shop_id": sid, "date": before}, {"_id": 1}):
+        return True
+    if await db.receipts.find_one({"shop_id": sid, "date": before, **LIVE_RECEIPT}, {"_id": 1}):
+        return True
+    return False
+
+
+async def _unsold(sid, rows: list[tuple]) -> list[dict]:
+    """Aina za stock zisizouzwa hata moja kwenye kipindi (capital kubwa kwanza)."""
+    sold_ids = {vid for _, _, vid, _, _, _ in rows if vid}
+    sold_names = {name.lower() for _, name, _, _, _, _ in rows}
+    out: list[dict] = []
+    async for product in db.products.find({"shop_id": sid}):
+        for variant in product.get("variants", []):
+            if str(variant["_id"]) in sold_ids or variant["name"].lower() in sold_names:
+                continue
+            qty = max(int(variant.get("qty", 0) or 0), 0)
+            out.append(
+                {
+                    "name": variant["name"],
+                    "qty": qty,
+                    "capital": qty * int(variant.get("buying", 0) or 0),
+                }
+            )
+    out.sort(key=lambda v: (-v["capital"], v["name"]))
+    return out[:20]
+
+
+def _brief(item: dict) -> dict:
+    return {"name": item["name"], "qty": item["qty"], "profit": item["profit"]}
+
+
+def _expenses_between(expenses: dict[str, int], start: str, end: str) -> int:
+    return sum(v for k, v in expenses.items() if start <= k <= end)
+
+
+# ── P1: DayReport ─────────────────────────────────────────────────────────────
 
 async def build_day(sid, day: date) -> dict:
-    day_str = day.isoformat()
-    receipts_docs = [
-        r
-        async for r in db.receipts.find(
-            {"shop_id": sid, "date": day_str, "status": "paid"}
-        ).sort("number", 1)
-    ]
-    sheet = await db.daily_sheets.find_one({"shop_id": sid, "date": day_str})
-    stats, items = _stats(receipts_docs, [sheet] if sheet else [])
-    top, _ = _top_low(items, n=len(items))
-
-    receipts_out = []
-    for r in receipts_docs:
-        receipts_out.append(
-            {
-                "id": str(r["_id"]),
-                "number": r["number"],
-                "customer": {"name": (r.get("customer") or {}).get("name", "")},
-                "time": _fmt_time(r.get("created_at")),
-                "paid": int((r.get("totals") or {}).get("paid", 0)),
-            }
-        )
-
-    exp_grouped = _expenses_grouped([sheet] if sheet else [])
+    day_str = _iso(day)
+    rows, expenses = await _rows(sid, day_str, day_str)
+    products = _by_name(rows)
+    summary = _summary(rows, expenses.get(day_str, 0))
 
     return {
         "period": "day",
-        "label": f"{DAY_NAMES[day.weekday()]}, {day.day} {MONTH_SHORT[day.month - 1]}",
-        "start": day_str,
-        "end": day_str,
-        "has_prev": True,
-        "has_next": day + timedelta(days=1) <= today(),
-        "summary": _summary(stats),
-        "bars": [],
+        "date": day_str,
+        "label": f"{DAY_NAMES[day.weekday()]}, {day.day} {MONTH_SHORT[day.month - 1]} {day.year}",
+        "short_label": f"{DAY_NAMES[day.weekday()]}, {day.day} {MONTH_SHORT[day.month - 1]}",
+        "has_prev": await _has_data_before(sid, day),
+        "has_next": day < today(),
+        "summary": summary,
+        "products": [
+            {
+                "name": p["name"],
+                "qty": p["qty"],
+                "sales": p["sales"],
+                "capital": p["capital"],
+                "profit": p["profit"],
+            }
+            for p in products
+        ],
+        "totals": {
+            "qty": sum(p["qty"] for p in products),
+            "sales": summary["sales"],
+            "profit": summary["product_profit"],
+        },
+    }
+
+
+# ── P2–P4: PeriodReport ──────────────────────────────────────────────────────
+
+def _chunks(period: str, anchor: date) -> tuple[date, date, list[tuple], str, str]:
+    if period == "week":
+        start = _week_start(anchor)
+        end = start + timedelta(days=6)
+        chunks = [
+            (start + timedelta(days=i), DAY_SHORT[(start + timedelta(days=i)).weekday()],
+             start + timedelta(days=i), start + timedelta(days=i))
+            for i in range(7)
+        ]
+        if start.month == end.month:
+            label = f"{start.day} – {end.day} {MONTH_NAMES[end.month - 1]} {end.year}"
+            short = f"{start.day} – {end.day} {MONTH_SHORT[end.month - 1]} {end.year}"
+        else:
+            label = (
+                f"{start.day} {MONTH_NAMES[start.month - 1]} – "
+                f"{end.day} {MONTH_NAMES[end.month - 1]} {end.year}"
+            )
+            short = (
+                f"{start.day} {MONTH_SHORT[start.month - 1]} – "
+                f"{end.day} {MONTH_SHORT[end.month - 1]} {end.year}"
+            )
+        return start, end, chunks, label, short
+
+    if period == "month":
+        start = anchor.replace(day=1)
+        end = month_end(anchor.year, anchor.month)
+        chunks = []
+        cursor = start
+        while cursor <= end:
+            chunk_end = min(_week_start(cursor) + timedelta(days=6), end)
+            label = f"{cursor.day}–{chunk_end.day}" if cursor != chunk_end else f"{cursor.day}"
+            chunks.append((cursor, label, cursor, chunk_end))
+            cursor = chunk_end + timedelta(days=1)
+        label = f"{MONTH_NAMES[start.month - 1]} {start.year}"
+        return start, end, chunks, label, label
+
+    start = date(anchor.year, 1, 1)
+    end = date(anchor.year, 12, 31)
+    chunks = [
+        (date(anchor.year, m, 1), MONTH_SHORT[m - 1], date(anchor.year, m, 1), month_end(anchor.year, m))
+        for m in range(1, 13)
+    ]
+    return start, end, chunks, str(anchor.year), str(anchor.year)
+
+
+async def build_report(sid, period: str, anchor: date) -> dict:
+    start, end, chunks, label, short = _chunks(period, anchor)
+    start_str, end_str = _iso(start), _iso(end)
+    rows, expenses = await _rows(sid, start_str, end_str)
+    now = today()
+
+    bars: list[dict] = []
+    for key, chunk_label, chunk_start, chunk_end in chunks:
+        if chunk_start > now:
+            bars.append({"key": _iso(key), "label": chunk_label, "net": None})
+            continue
+        a, b = _iso(chunk_start), _iso(chunk_end)
+        part = [r for r in rows if a <= r[0] <= b]
+        bars.append(
+            {
+                "key": _iso(key),
+                "label": chunk_label,
+                "net": _summary(part, _expenses_between(expenses, a, b))["net"],
+            }
+        )
+
+    products = _by_name(rows)
+    top = [_brief(p) for p in products[:5]]
+    low = [_brief(p) for p in sorted(products[5:], key=lambda p: (p["qty"], p["sales"]))[:3]]
+    summary = _summary(rows, sum(expenses.values()))
+    summary["net"] = sum(bar["net"] for bar in bars if bar["net"] is not None)
+
+    return {
+        "period": period,
+        "start": start_str,
+        "end": end_str,
+        "label": label,
+        "short_label": short,
+        "has_prev": await _has_data_before(sid, start),
+        "has_next": end < now,
+        "summary": summary,
+        "bars": bars,
         "top": top,
-        "low": [],
-        "expenses": exp_grouped,
-        "receipts": receipts_out,
-        "weeks": [],
-        "unsold": [],
-        "capital_in_shop": 0,
-        "purchases": 0,
+        "low": low,
+        "unsold": await _unsold(sid, rows),
     }

@@ -18,6 +18,8 @@ async def create_indexes() -> None:
     await db.products.create_index([("shop_id", 1), ("name_lc", 1)], unique=True)
     await db.products.create_index([("shop_id", 1), ("variants._id", 1)])
     await db.receipts.create_index([("shop_id", 1), ("date", 1)])
+    await db.receipts.create_index([("shop_id", 1), ("date", -1), ("number", -1)])
+    await db.receipts.create_index([("shop_id", 1), ("customer.name", 1)])
     await db.receipts.create_index([("shop_id", 1), ("number", 1)], unique=True)
     await db.daily_sheets.create_index([("shop_id", 1), ("date", 1)], unique=True)
     await db.stock_movements.create_index([("shop_id", 1), ("date", 1)])

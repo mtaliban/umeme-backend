@@ -1,5 +1,7 @@
 """Bidhaa: orodha, kuongeza, kubadilisha jina, kufuta na kuongeza aina."""
 
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from ..auth import current_shop_id
@@ -16,6 +18,25 @@ async def list_products(sid=Depends(current_shop_id)):
     out = []
     async for product in db.products.find({"shop_id": sid}).sort("created_at", 1):
         out.append(stock.product_out(product))
+    return out
+
+
+@router.get("/products/search-list")
+async def search_list(q: str | None = None, sid=Depends(current_shop_id)):
+    """Orodha moja (flat) ya aina zote kwa screen ya kutafuta/kuuza."""
+    match: dict = {"shop_id": sid}
+    text = (q or "").strip()
+    if text:
+        pattern = {"$regex": re.escape(text), "$options": "i"}
+        match["$or"] = [{"name_lc": pattern}, {"variants.name_lc": pattern}]
+    out = []
+    async for product in db.products.find(match).sort("created_at", 1):
+        for variant in product.get("variants", []):
+            item = stock.variant_out(product, variant)
+            item["variant_id"] = item["id"]
+            out.append(item)
+    # Spec: aina zote zimepangwa kwa jina.
+    out.sort(key=lambda x: x["name"].lower())
     return out
 
 

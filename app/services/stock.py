@@ -102,11 +102,11 @@ async def log_movement(
     product_id,
     variant_id,
     name,
-    change,
+    delta,
     qty_after,
     buying,
     reason,
-    ref_id=None,
+    line_id=None,
     day=None,
     session=None,
 ) -> None:
@@ -116,11 +116,11 @@ async def log_movement(
             "product_id": product_id,
             "variant_id": variant_id,
             "name": name,
-            "change": int(change),
+            "delta": int(delta),
             "qty_after": int(qty_after),
             "buying": int(buying or 0),
             "reason": reason,
-            "ref_id": ref_id,
+            "line_id": line_id,
             "date": day or today_str(),
             "at": now(),
         },
@@ -136,26 +136,38 @@ async def take_stock(
     name,
     buying,
     reason,
-    ref_id=None,
+    line_id=None,
     day=None,
     session=None,
-) -> int:
-    """Punguza stock kwa usalama — haishuki chini ya 0 kamwe."""
+) -> tuple[int, int]:
+    """Punguza stock kadri inavyopatikana (haishuki chini ya 0).
+
+    Hurudisha (stock_taken, qty_after): stock ikiwa pungufu mauzo yanakubaliwa
+    na kinachopatikana tu ndicho kinachotolewa kwenye stock.
+    """
     pid = oid(product_id, "Bidhaa")
     vid = oid(variant_id, "Aina")
-    res = await db.products.update_one(
-        {"_id": pid, "shop_id": sid, "variants": {"$elemMatch": {"_id": vid, "qty": {"$gte": int(qty)}}}},
-        {"$inc": {"variants.$.qty": -int(qty)}, "$set": {"updated_at": now()}},
-        session=session,
-    )
-    if res.modified_count == 0:
-        current = await variant_qty(sid, pid, vid, session=session)
-        raise HTTPException(400, f"{name}: zipo {current} tu")
+    wanted = max(0, int(qty))
+    current = await variant_qty(sid, pid, vid, session=session)
+    taken = min(wanted, current)
+    if taken > 0:
+        res = await db.products.update_one(
+            {
+                "_id": pid,
+                "shop_id": sid,
+                "variants": {"$elemMatch": {"_id": vid, "qty": {"$gte": taken}}},
+            },
+            {"$inc": {"variants.$.qty": -taken}, "$set": {"updated_at": now()}},
+            session=session,
+        )
+        if res.modified_count == 0:
+            taken = 0
     qty_after = await variant_qty(sid, pid, vid, session=session)
-    await log_movement(
-        sid, pid, vid, name, -int(qty), qty_after, buying, reason, ref_id, day, session=session
-    )
-    return qty_after
+    if taken > 0:
+        await log_movement(
+            sid, pid, vid, name, -taken, qty_after, buying, reason, line_id, day, session=session
+        )
+    return taken, qty_after
 
 
 async def return_stock(
@@ -166,7 +178,7 @@ async def return_stock(
     name,
     buying,
     reason,
-    ref_id=None,
+    line_id=None,
     day=None,
     session=None,
 ) -> int:
@@ -180,7 +192,7 @@ async def return_stock(
     )
     qty_after = await variant_qty(sid, pid, vid, session=session)
     await log_movement(
-        sid, pid, vid, name, int(qty), qty_after, buying, reason, ref_id, day, session=session
+        sid, pid, vid, name, int(qty), qty_after, buying, reason, line_id, day, session=session
     )
     return qty_after
 

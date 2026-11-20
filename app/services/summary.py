@@ -3,6 +3,9 @@
 from ..db import db
 from ..tz import TZ
 
+# Risiti zisizofutwa (spec: cancelled != true)
+LIVE = {"status": {"$ne": "cancelled"}, "cancelled": {"$ne": True}}
+
 
 def _add(bucket: dict, key: str, name: str, qty: int, revenue: int, cost: int) -> None:
     item = bucket.setdefault(key, {"name": name, "qty": 0, "revenue": 0, "cost": 0})
@@ -12,7 +15,7 @@ def _add(bucket: dict, key: str, name: str, qty: int, revenue: int, cost: int) -
 
 
 async def paid_receipts(sid, day: str) -> list[dict]:
-    cursor = db.receipts.find({"shop_id": sid, "date": day, "status": "paid"}).sort("number", 1)
+    cursor = db.receipts.find({"shop_id": sid, "date": day, **LIVE}).sort("number", 1)
     return [r async for r in cursor]
 
 
@@ -22,7 +25,7 @@ async def sheet(sid, day: str) -> dict | None:
 
 async def day_summary(sid, day: str) -> dict:
     sales = capital = expenses = 0
-    async for r in db.receipts.find({"shop_id": sid, "date": day, "status": "paid"}, {"totals": 1}):
+    async for r in db.receipts.find({"shop_id": sid, "date": day, **LIVE}, {"totals": 1}):
         totals = r.get("totals") or {}
         sales += int(totals.get("paid", 0))
         capital += int(totals.get("capital", 0))
@@ -41,10 +44,23 @@ async def day_summary(sid, day: str) -> dict:
     }
 
 
+async def day_items(sid, day: str) -> int:
+    """Jumla ya idadi ya bidhaa zote za siku (risiti + daftari)."""
+    qty = 0
+    async for r in db.receipts.find({"shop_id": sid, "date": day, **LIVE}):
+        for it in r.get("items", []):
+            qty += int(it["qty"])
+    doc = await sheet(sid, day)
+    if doc:
+        for line in doc.get("lines", []):
+            qty += int(line["qty"])
+    return qty
+
+
 async def sold_items(sid, day: str) -> list[dict]:
     """Vilivyouzwa leo kwa jina: risiti + mstari wa daftari."""
     bucket: dict[str, dict] = {}
-    async for r in db.receipts.find({"shop_id": sid, "date": day, "status": "paid"}):
+    async for r in db.receipts.find({"shop_id": sid, "date": day, **LIVE}):
         for it in r.get("items", []):
             qty = int(it["qty"])
             unit = int(it["price"]) - int(it.get("discount", 0) or 0)
@@ -80,7 +96,7 @@ async def sold_items(sid, day: str) -> list[dict]:
 async def sold_items_home(sid, day: str) -> list[dict]:
     """Vilivyouzwa kwa home: jina, qty, selling, sales, capital, profit — sorted qty desc."""
     bucket: dict[str, dict] = {}
-    async for r in db.receipts.find({"shop_id": sid, "date": day, "status": "paid"}):
+    async for r in db.receipts.find({"shop_id": sid, "date": day, **LIVE}):
         for it in r.get("items", []):
             qty = int(it["qty"])
             unit = int(it["price"]) - int(it.get("discount", 0) or 0)
@@ -119,7 +135,7 @@ async def sold_items_home(sid, day: str) -> list[dict]:
 async def sold_variants(sid, day: str) -> dict[str, dict]:
     """vilivyouzwa leo kwa variant_id: qty na faida."""
     bucket: dict[str, dict] = {}
-    async for r in db.receipts.find({"shop_id": sid, "date": day, "status": "paid"}):
+    async for r in db.receipts.find({"shop_id": sid, "date": day, **LIVE}):
         for it in r.get("items", []):
             qty = int(it["qty"])
             unit = int(it["price"]) - int(it.get("discount", 0) or 0)
@@ -142,7 +158,7 @@ async def sold_variants(sid, day: str) -> dict[str, dict]:
 async def receipt_lines(sid, day: str) -> list[dict]:
     lines = []
     for r in await paid_receipts(sid, day):
-        for it in r.get("items", []):
+        for index, it in enumerate(r.get("items", [])):
             qty = int(it["qty"])
             price = int(it["price"])
             discount = int(it.get("discount", 0) or 0)
@@ -150,6 +166,7 @@ async def receipt_lines(sid, day: str) -> list[dict]:
             pid = it.get("product_id")
             lines.append(
                 {
+                    "id": f"rc_{r['number']}_{index}",
                     "receipt_id": str(r["_id"]),
                     "receipt_no": r["number"],
                     "number": r["number"],
@@ -161,6 +178,7 @@ async def receipt_lines(sid, day: str) -> list[dict]:
                     "discount": discount,
                     "selling": price - discount,
                     "buying": int(it.get("buying", 0) or 0),
+                    "stock_taken": int(it.get("stock_taken", 0) or 0),
                     "amount": qty * (price - discount),
                     "out_of_stock": bool(it.get("out_of_stock")),
                 }
@@ -185,6 +203,9 @@ def sheet_out(doc: dict | None) -> dict:
                 "selling": int(line["selling"]),
                 "buying": int(line.get("buying", 0) or 0),
                 "stock_selling": int(line.get("stock_selling", line["selling"]) or 0),
+                "stock_taken": int(
+                    line.get("stock_taken", 0 if line.get("out_of_stock") else line["qty"]) or 0
+                ),
                 "out_of_stock": bool(line.get("out_of_stock")),
             }
         )
@@ -225,7 +246,7 @@ async def last_day_with_data(sid) -> str | None:
         projection={"date": 1},
     )
     d2 = await db.receipts.find_one(
-        {"shop_id": sid, "date": {"$lte": t}, "status": "paid"},
+        {"shop_id": sid, "date": {"$lte": t}, **LIVE},
         sort=[("date", -1)],
         projection={"date": 1},
     )

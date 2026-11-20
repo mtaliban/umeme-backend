@@ -52,17 +52,19 @@ async def patch_variant(variant_id: str, body: VariantPatch, sid=Depends(current
     buying = int(body.buying if body.buying is not None else variant.get("buying", 0) or 0)
 
     if add_qty < 0:
-        res = await db.products.update_one(
-            {
-                "_id": pid,
-                "shop_id": sid,
-                "variants": {"$elemMatch": {"_id": vid, "qty": {"$gte": abs(add_qty)}}},
-            },
-            {"$inc": {"variants.$.qty": add_qty}, "$set": {"updated_at": now()}},
-        )
-        if res.modified_count == 0:
-            current = await stock.variant_qty(sid, pid, vid)
-            raise HTTPException(400, f"{variant['name']}: zipo {current} tu")
+        # Punguza kadri inavyopatikana tu — haishuki chini ya 0.
+        current = await stock.variant_qty(sid, pid, vid)
+        removed = min(abs(add_qty), current)
+        if removed > 0:
+            await db.products.update_one(
+                {
+                    "_id": pid,
+                    "shop_id": sid,
+                    "variants": {"$elemMatch": {"_id": vid, "qty": {"$gte": removed}}},
+                },
+                {"$inc": {"variants.$.qty": -removed}, "$set": {"updated_at": now()}},
+            )
+        add_qty = -removed
     elif add_qty > 0:
         await db.products.update_one(
             {"_id": pid, "shop_id": sid, "variants._id": vid},
