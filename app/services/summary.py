@@ -115,7 +115,7 @@ async def sold_items_home(sid, day: str) -> list[dict]:
                 "out_of_stock": item["out_of_stock"],
             }
         )
-    out.sort(key=lambda x: (-x["profit"], x["name"]))
+    out.sort(key=lambda x: (-x["profit"], -x["sales"]))
     return out
 
 
@@ -217,10 +217,20 @@ def _fmt_time(dt, tz) -> str:
         return ""
 
 
-async def last_saved_day(sid) -> dict | None:
-    """Daftari la mwisho lililohifadhiwa (saved_at != null)."""
+async def last_day_with_data(sid) -> str | None:
+    """Siku ya mwisho yenye data yoyote (lines, risiti, au gharama) — haitegemei saved_at."""
     from ..tz import today_str
-    return await db.daily_sheets.find_one(
-        {"shop_id": sid, "saved_at": {"$ne": None}, "date": {"$lte": today_str()}},
+    t = today_str()
+    d1 = await db.daily_sheets.find_one(
+        {"shop_id": sid, "date": {"$lte": t},
+         "$or": [{"lines.0": {"$exists": True}}, {"expenses.0": {"$exists": True}}]},
         sort=[("date", -1)],
+        projection={"date": 1},
     )
+    d2 = await db.receipts.find_one(
+        {"shop_id": sid, "date": {"$lte": t}, "status": "paid"},
+        sort=[("date", -1)],
+        projection={"date": 1},
+    )
+    days = [x["date"] for x in (d1, d2) if x]
+    return max(days) if days else None

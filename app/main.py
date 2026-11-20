@@ -22,6 +22,7 @@ from .routers import (
     products,
     receipts,
     reports,
+    test_reset,
     variants,
 )
 from .services import notify
@@ -77,7 +78,7 @@ async def api_health():
     return {"ok": True}
 
 
-for module in (auth, me, devices, home, products, variants, daily, expenses, receipts, reports):
+for module in (auth, me, devices, home, products, variants, daily, expenses, receipts, reports, test_reset):
     app.include_router(module.router)
 
 
