@@ -78,15 +78,14 @@ async def sold_items(sid, day: str) -> list[dict]:
 
 
 async def sold_items_home(sid, day: str) -> list[dict]:
-    """Vilivyouzwa kwa home: jina, qty, sales, capital, profit, out_of_stock."""
+    """Vilivyouzwa kwa home: jina, qty, selling, sales, capital, profit — sorted qty desc."""
     bucket: dict[str, dict] = {}
     async for r in db.receipts.find({"shop_id": sid, "date": day, "status": "paid"}):
         for it in r.get("items", []):
             qty = int(it["qty"])
             unit = int(it["price"]) - int(it.get("discount", 0) or 0)
             cost = qty * int(it.get("buying", 0) or 0)
-            oos = bool(it.get("out_of_stock"))
-            item = bucket.setdefault(it["name"], {"name": it["name"], "qty": 0, "revenue": 0, "cost": 0, "out_of_stock": oos})
+            item = bucket.setdefault(it["name"], {"name": it["name"], "qty": 0, "revenue": 0, "cost": 0})
             item["qty"] += qty
             item["revenue"] += qty * unit
             item["cost"] += cost
@@ -96,8 +95,7 @@ async def sold_items_home(sid, day: str) -> list[dict]:
             qty = int(line["qty"])
             rev = qty * int(line["selling"])
             cost = qty * int(line.get("buying", 0) or 0)
-            oos = bool(line.get("out_of_stock"))
-            item = bucket.setdefault(line["name"], {"name": line["name"], "qty": 0, "revenue": 0, "cost": 0, "out_of_stock": oos})
+            item = bucket.setdefault(line["name"], {"name": line["name"], "qty": 0, "revenue": 0, "cost": 0})
             item["qty"] += qty
             item["revenue"] += rev
             item["cost"] += cost
@@ -112,10 +110,9 @@ async def sold_items_home(sid, day: str) -> list[dict]:
                 "sales": item["revenue"],
                 "capital": item["cost"],
                 "profit": item["revenue"] - item["cost"],
-                "out_of_stock": item["out_of_stock"],
             }
         )
-    out.sort(key=lambda x: (-x["profit"], -x["sales"]))
+    out.sort(key=lambda x: (-x["qty"], -x["sales"]))
     return out
 
 
