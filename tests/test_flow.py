@@ -500,7 +500,7 @@ async def test_validation_error_detail_is_string(client, headers):
     res = await client.post("/products", json={"has_types": False}, headers=headers)
     assert res.status_code == 422
     assert isinstance(res.json()["detail"], str)
-    assert res.json()["detail"].startswith("name:")
+    assert res.json()["detail"] == "Jaza jina"
 
 
 async def test_stock_shortfall_is_recorded(client, headers):

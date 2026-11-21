@@ -56,15 +56,29 @@ app.add_middleware(
 )
 
 
+# Majina ya field → ujumbe wa Kiswahili wa spec (R1 za kila ukurasa).
+FIELD_MESSAGES = {
+    "qty": "Jaza idadi",
+    "add_qty": "Jaza idadi",
+    "selling": "Jaza bei",
+    "price": "Jaza bei",
+    "buying": "Jaza buying",
+    "amount": "Jaza kiasi",
+    "discount": "Punguzo si sahihi",
+    "name": "Jaza jina",
+}
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
+    """Kila kosa la muundo wa ombi lirudi `{"detail": "<Kiswahili>"}` (si list)."""
     errors = exc.errors()
+    logger.info("Ombi halipo sahihi: %s", errors)
     if not errors:
         return JSONResponse(status_code=422, content={"detail": "Ombi halipo sahihi"})
-    error = errors[0]
-    field = ".".join(str(x) for x in error.get("loc", [])[1:])
-    message = error.get("msg", "Ombi halipo sahihi")
-    detail = f"{field}: {message}" if field else message
+    loc = [str(x) for x in errors[0].get("loc", []) if x != "body"]
+    field = loc[-1] if loc else ""
+    detail = FIELD_MESSAGES.get(field, "Ombi halipo sahihi")
     return JSONResponse(status_code=422, content={"detail": detail})
 
 

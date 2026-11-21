@@ -12,7 +12,7 @@ Server: `http://13.60.24.131`  ·  PIN ya duka: ile iliyowekwa na `scripts/creat
 | Aina zote | 37 |
 | Idadi ya stock yote | 264 |
 | Mtaji uliopo dukani (Σ qty × buying) | 3,383,500 |
-| Faida ukiuza zote (Σ qty × (selling − buying)) | 1,595,500 |
+| Faida ukiuza zote (Σ qty × (selling − buying)) | 1,571,500 |
 
 ## 2. Bidhaa zote
 
@@ -25,7 +25,7 @@ Server: `http://13.60.24.131`  ·  PIN ya duka: ile iliyowekwa na `scripts/creat
 | Abaya | Abaya ya Kituruki | 16 | 5,000 | 8,000 | 80,000 |
 | Abaya | Abaya nyeusi | 5 | 7,000 | 11,000 | 35,000 |
 | Abaya | Abaya ya harusi | 3 | 40,000 | 60,000 | 120,000 |
-| Abaya | Abaya Dubai | 8 | 25,000 | 38,000 | 200,000 |
+| Abaya | Abaya ya Dubai | 8 | 25,000 | 35,000 | 200,000 |
 | Kofia | Kofia nyeupe | 8 | 20,000 | 25,000 | 160,000 |
 | Kofia | Kofia nyeusi | 6 | 15,000 | 22,000 | 90,000 |
 | Kofia | Kofia ya bao | 5 | 6,000 | 10,000 | 30,000 |
@@ -116,10 +116,10 @@ Hifadhi hii kama `scripts/products.json`:
         "selling": 60000
       },
       {
-        "name": "Abaya Dubai",
+        "name": "Abaya ya Dubai",
         "qty": 8,
         "buying": 25000,
-        "selling": 38000
+        "selling": 35000
       }
     ]
   },
