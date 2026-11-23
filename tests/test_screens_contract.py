@@ -441,7 +441,7 @@ async def test_receipts_screen_json(client, headers, shop):
     assert (today_list["date"], today_list["count"], today_list["total"]) == (DAY2, 1, 148000)
     assert today_list["next_number"] == "0002"
     row = today_list["receipts"][0]
-    assert set(row) == {"id", "number", "customer", "time", "paid"}
+    assert set(row) == {"id", "number", "customer", "location", "time", "paid"}
     assert (row["number"], row["customer"], row["paid"]) == ("0001", "Said Hamad", 148000)
     assert re.fullmatch(r"\d{2}:\d{2}", row["time"])
 
@@ -461,7 +461,11 @@ async def test_receipts_screen_json(client, headers, shop):
         "shop",
     }
     assert (one["number"], one["date"]) == ("0001", DAY2)
-    assert one["customer"] == {"name": "Said Hamad", "phone": "0712445900"}
+    assert one["customer"] == {
+        "name": "Said Hamad",
+        "phone": "0712445900",
+        "location": "",
+    }
     assert [(i["name"], i["amount"]) for i in one["items"]] == [
         ("Alfurqan Kanzu", 130000),
         ("Kanga za pwani", 18000),

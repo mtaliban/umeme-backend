@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 from ..db import db
 from ..tz import DAY_NAMES, DAY_SHORT, MONTH_NAMES, MONTH_SHORT, month_end, today
+from .summary import line_buying, variant_buying
 
 # Risiti zisizofutwa (status au cancelled)
 LIVE_RECEIPT = {"status": {"$ne": "cancelled"}, "cancelled": {"$ne": True}}
@@ -30,6 +31,7 @@ async def _rows(sid, start: str, end: str) -> tuple[list[tuple], dict[str, int]]
         {"shop_id": sid, "date": {"$gte": start, "$lte": end}}
     ):
         day = sheet["date"]
+        fallback = await variant_buying(sid, sheet.get("lines", []))
         for line in sheet.get("lines", []):
             vid = line.get("variant_id")
             out.append(
@@ -39,7 +41,7 @@ async def _rows(sid, start: str, end: str) -> tuple[list[tuple], dict[str, int]]
                     str(vid) if vid else None,
                     int(line["qty"]),
                     int(line["selling"]),
-                    int(line.get("buying", 0) or 0),
+                    line_buying(line, fallback),
                 )
             )
         expenses[day] += sum(int(e.get("amount", 0) or 0) for e in sheet.get("expenses", []))

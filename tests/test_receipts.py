@@ -153,7 +153,11 @@ async def test_create_receipt_contract(client, headers):
         "discount": 1000,
         "amount": 20000,
     }
-    assert receipt["customer"] == {"name": "Said Hamad", "phone": "0712445900"}
+    assert receipt["customer"] == {
+        "name": "Said Hamad",
+        "phone": "0712445900",
+        "location": "",
+    }
     assert receipt["shop"] == {
         "name": "UMMU AYMAN OUTFITS",
         "phone": "0621 340 044",
@@ -171,6 +175,7 @@ async def test_create_receipt_contract(client, headers):
         "id": receipt["id"],
         "number": "0001",
         "customer": "Said Hamad",
+        "location": "",
         "time": receipt["time"],
         "paid": 42000,
     }
@@ -279,7 +284,7 @@ async def test_empty_customer_shows_mteja(client, headers):
         headers=headers,
     )
     assert res.status_code == 201, res.text
-    assert res.json()["customer"] == {"name": "", "phone": ""}
+    assert res.json()["customer"] == {"name": "", "phone": "", "location": ""}
     data = (await client.get("/receipts", params={"date": DAY}, headers=headers)).json()
     assert data["receipts"][0]["customer"] == "Mteja"
 

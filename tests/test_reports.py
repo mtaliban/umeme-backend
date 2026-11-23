@@ -235,7 +235,7 @@ async def test_week_bars_seven_days(client, headers):
     assert data["start"] == "2026-11-15" and data["end"] == "2026-11-21"
     assert data["label"] == "15 – 21 Novemba 2026"
     assert data["short_label"] == "15 – 21 Nov 2026"
-    assert data["has_next"] is False
+    assert data["has_next"] is (date(2026, 11, 21) < today())
     assert [bar["label"] for bar in data["bars"]] == ["Jpi", "Jtt", "Jne", "Jtn", "Alh", "Iju", "Jmo"]
     assert data["bars"][0]["key"] == "2026-11-15"
     assert data["bars"][0]["net"] == 0
@@ -269,8 +269,9 @@ async def test_month_week_chunks(client, headers):
     assert [bar["label"] for bar in data["bars"]] == ["1–7", "8–14", "15–21", "22–28", "29–30"]
     assert data["bars"][0]["key"] == "2026-11-01"
     assert data["bars"][2]["net"] == 310000
-    assert data["bars"][3]["net"] is None
-    assert data["bars"][4]["net"] is None
+    # Bars za siku zijazo ni None; wiki iliyoanza tayari ina 0.
+    assert data["bars"][3]["net"] is (None if today() < date(2026, 11, 22) else 0)
+    assert data["bars"][4]["net"] is (None if today() < date(2026, 11, 29) else 0)
 
 
 async def test_year_months(client, headers):

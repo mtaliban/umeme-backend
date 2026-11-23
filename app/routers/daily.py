@@ -22,7 +22,9 @@ async def _sheet(sid, day_str: str) -> dict | None:
 
 async def daily_payload(sid, day_str: str) -> dict:
     doc = await _sheet(sid, day_str)
-    sheet = summary_service.sheet_out(doc)
+    sheet = summary_service.sheet_out(
+        doc, await summary_service.variant_buying(sid, (doc or {}).get("lines", []))
+    )
     return {
         "date": day_str,
         "receipt_lines": await summary_service.receipt_lines(sid, day_str),
@@ -153,9 +155,9 @@ async def add_line(date: str, body: DailyLineAdd, sid=Depends(current_shop_id)):
         name = (body.name or "").strip()
         if not name:
             raise HTTPException(422, "Jaza jina la bidhaa")
-        if body.buying is None:
+        if body.buying is None or int(body.buying) <= 0:
             raise HTTPException(422, "Jaza buying")
-        buying = max(0, int(body.buying))
+        buying = int(body.buying)
         line = {
             "id": line_id,
             "variant_id": None,
@@ -170,7 +172,14 @@ async def add_line(date: str, body: DailyLineAdd, sid=Depends(current_shop_id)):
         }
     else:
         product, variant = await stock.find_variant(sid, body.variant_id)
-        buying = int(variant.get("buying", 0))
+        # Snapshot ya mstari: buying ya mauzo haya inaweza kutofautiana na stock.
+        # variants.buying, stock_selling na selling za stock hazibadiliki.
+        if body.buying is not None:
+            if int(body.buying) < 0:
+                raise HTTPException(422, "Jaza buying")
+            buying = int(body.buying)
+        else:
+            buying = int(variant.get("buying", 0))
         stock_taken, qty_after = await stock.take_stock(
             sid,
             product["_id"],
@@ -238,6 +247,13 @@ async def edit_line(date: str, line_id: str, body: DailyLineEdit, sid=Depends(cu
         raise HTTPException(422, "Jaza bei")
 
     out_of_stock = bool(old_line.get("out_of_stock"))
+
+    new_buying = None
+    if body.buying is not None:
+        new_buying = int(body.buying)
+        if new_buying < 0 or (out_of_stock and new_buying <= 0):
+            raise HTTPException(422, "Jaza buying")
+
     qty_after = None
     stock_taken = 0 if out_of_stock else int(old_line.get("stock_taken", 0) or 0)
 
@@ -276,8 +292,9 @@ async def edit_line(date: str, line_id: str, body: DailyLineEdit, sid=Depends(cu
         "lines.$.stock_taken": stock_taken,
         "updated_at": now(),
     }
-    if out_of_stock and body.buying is not None:
-        updates["lines.$.buying"] = max(0, int(body.buying))
+    # Buying ya mstari pekee — stock haibadiliki.
+    if new_buying is not None:
+        updates["lines.$.buying"] = new_buying
 
     await db.daily_sheets.update_one(
         {"shop_id": sid, "date": day_str, "lines.id": line_id},

@@ -30,8 +30,10 @@ LIVE = {"status": {"$ne": "cancelled"}, "cancelled": {"$ne": True}}
 
 
 def _customer(receipt: dict) -> dict:
-    customer = {"name": "", "phone": ""}
+    customer = {"name": "", "phone": "", "location": ""}
     customer.update({k: v for k, v in (receipt.get("customer") or {}).items() if k != "_id"})
+    # Risiti za zamani zisizo na location zirudishe "" (sio None).
+    customer["location"] = str(customer.get("location") or "").strip()
     return customer
 
 
@@ -102,7 +104,10 @@ async def list_receipts(date: str | None = None, sid=Depends(current_shop_id)):
     day = parse_day(date).isoformat()
     rows = []
     async for receipt in db.receipts.find({"shop_id": sid, "date": day, **LIVE}).sort("number", -1):
-        rows.append(receipt_row(receipt))
+        row = receipt_row(receipt)
+        # TodayList: location ile ile iliyohifadhiwa kwenye risiti.
+        row["location"] = _customer(receipt)["location"]
+        rows.append(row)
     shop = await db.shops.find_one({"_id": sid}) or {}
     return {
         "date": day,
@@ -260,6 +265,8 @@ async def create_receipt(body: ReceiptIn, request: Request, sid=Depends(current_
     customer.pop("_id", None)
     customer["name"] = str(customer.get("name") or "").strip()
     customer["phone"] = str(customer.get("phone") or "").strip()
+    # Hiari: haisababishi 422; tupu/None → "" (sio None), trim na kikomo cha 120.
+    customer["location"] = str(customer.get("location") or "").strip()[:120]
 
     items: list[dict] = []
 

@@ -99,6 +99,7 @@ class CustomerIn(BaseModel):
 
     name: str = ""
     phone: str = ""
+    location: str = ""  # hiari — huhifadhiwa kama "" ikiwa haitumwa
 
 
 class ReceiptItemIn(BaseModel):

@@ -14,6 +14,31 @@ def _add(bucket: dict, key: str, name: str, qty: int, revenue: int, cost: int) -
     item["cost"] += int(cost)
 
 
+async def variant_buying(sid, lines: list[dict]) -> dict:
+    """Buying ya sasa ya variants kwa mistari isiyo na `buying` (data za zamani)."""
+    missing = [
+        line["variant_id"]
+        for line in lines
+        if line.get("buying") is None and not line.get("out_of_stock") and line.get("variant_id")
+    ]
+    if not missing:
+        return {}
+    found: dict = {}
+    async for product in db.products.find({"shop_id": sid, "variants._id": {"$in": missing}}):
+        for variant in product.get("variants", []):
+            if variant["_id"] in missing:
+                found[variant["_id"]] = int(variant.get("buying", 0) or 0)
+    return found
+
+
+def line_buying(line: dict, fallback: dict | None = None) -> int:
+    """Buying ya mstari (snapshot); mistari ya zamani hurudi kwenye variants.buying."""
+    buying = line.get("buying")
+    if buying is None:
+        buying = (fallback or {}).get(line.get("variant_id"), 0)
+    return int(buying or 0)
+
+
 async def paid_receipts(sid, day: str) -> list[dict]:
     cursor = db.receipts.find({"shop_id": sid, "date": day, **LIVE}).sort("number", 1)
     return [r async for r in cursor]
@@ -31,9 +56,10 @@ async def day_summary(sid, day: str) -> dict:
         capital += int(totals.get("capital", 0))
     doc = await sheet(sid, day)
     if doc:
+        fallback = await variant_buying(sid, doc.get("lines", []))
         for line in doc.get("lines", []):
             sales += int(line["qty"]) * int(line["selling"])
-            capital += int(line["qty"]) * int(line.get("buying", 0))
+            capital += int(line["qty"]) * line_buying(line, fallback)
         expenses = sum(int(e.get("amount", 0) or 0) for e in doc.get("expenses", []))
     return {
         "sales": sales,
@@ -67,6 +93,7 @@ async def sold_items(sid, day: str) -> list[dict]:
             _add(bucket, it["name"], it["name"], qty, qty * unit, qty * int(it.get("buying", 0) or 0))
     doc = await sheet(sid, day)
     if doc:
+        fallback = await variant_buying(sid, doc.get("lines", []))
         for line in doc.get("lines", []):
             qty = int(line["qty"])
             _add(
@@ -75,7 +102,7 @@ async def sold_items(sid, day: str) -> list[dict]:
                 line["name"],
                 qty,
                 qty * int(line["selling"]),
-                qty * int(line.get("buying", 0) or 0),
+                qty * line_buying(line, fallback),
             )
     out = []
     for item in bucket.values():
@@ -107,10 +134,11 @@ async def sold_items_home(sid, day: str) -> list[dict]:
             item["cost"] += cost
     doc = await sheet(sid, day)
     if doc:
+        fallback = await variant_buying(sid, doc.get("lines", []))
         for line in doc.get("lines", []):
             qty = int(line["qty"])
             rev = qty * int(line["selling"])
-            cost = qty * int(line.get("buying", 0) or 0)
+            cost = qty * line_buying(line, fallback)
             item = bucket.setdefault(line["name"], {"name": line["name"], "qty": 0, "revenue": 0, "cost": 0})
             item["qty"] += qty
             item["revenue"] += rev
@@ -146,12 +174,13 @@ async def sold_variants(sid, day: str) -> dict[str, dict]:
             item["profit"] += qty * (unit - buying)
     doc = await sheet(sid, day)
     if doc:
+        fallback = await variant_buying(sid, doc.get("lines", []))
         for line in doc.get("lines", []):
             qty = int(line["qty"])
             key = str(line.get("variant_id") or "")
             item = bucket.setdefault(key, {"qty": 0, "profit": 0})
             item["qty"] += qty
-            item["profit"] += qty * (int(line["selling"]) - int(line.get("buying", 0) or 0))
+            item["profit"] += qty * (int(line["selling"]) - line_buying(line, fallback))
     return bucket
 
 
@@ -186,13 +215,15 @@ async def receipt_lines(sid, day: str) -> list[dict]:
     return lines
 
 
-def sheet_out(doc: dict | None) -> dict:
+def sheet_out(doc: dict | None, buying_by_variant: dict | None = None) -> dict:
     if not doc:
         return {"date": None, "lines": [], "expenses": [], "saved_at": None, "updated_at": None}
+    buying_by_variant = buying_by_variant or {}
     lines = []
     for line in doc.get("lines", []):
         vid = line.get("variant_id")
         pid = line.get("product_id")
+        # Mistari ya zamani isiyo na buying: snapshot ya variants.buying ya sasa.
         lines.append(
             {
                 "id": line.get("id", ""),
@@ -201,7 +232,7 @@ def sheet_out(doc: dict | None) -> dict:
                 "name": line["name"],
                 "qty": int(line["qty"]),
                 "selling": int(line["selling"]),
-                "buying": int(line.get("buying", 0) or 0),
+                "buying": line_buying(line, buying_by_variant),
                 "stock_selling": int(line.get("stock_selling", line["selling"]) or 0),
                 "stock_taken": int(
                     line.get("stock_taken", 0 if line.get("out_of_stock") else line["qty"]) or 0
