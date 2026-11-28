@@ -61,7 +61,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: GH_TOKEN,GH_ACTOR,IMAGE_TAG,GH_OWNER,MONGO_ROOT_USERNAME,MONGO_ROOT_PASSWORD,JWT_SECRET,ADMIN_EMAIL,ADMIN_PASSWORD,SITE_URL,REVALIDATE_SECRET,FRONTEND_ORIGIN,GEMINI_API_KEY,GROQ_API_KEY,CLAUDE_API_KEY,SIGNATURE_NAME
           script: |
-            set -e
+            set -ex
 
             # Install Docker if not present
             if ! command -v docker &>/dev/null; then
@@ -80,12 +80,18 @@ jobs:
             sudo mkdir -p /opt/company-website
             sudo chown -R $USER:$USER /opt/company-website
 
-            # Clone or pull latest code
+            # Clone or pull latest code.
+            # Token inatumika kwa ombi hili pekee — sehemu ya URL ya clone ya zamani
+            # ilikuwa na token iliyokwisha muda, ndiyo maana `git pull` ilifeli na deploy ikakwama.
+            REPO_URL="https://x-access-token:$GH_TOKEN@github.com/$GH_OWNER/umeme-backend.git"
             if [ -d /opt/company-website/.git ]; then
-              cd /opt/company-website && git pull origin main
-            else
-              git clone https://$GH_ACTOR:$GH_TOKEN@github.com/$GH_OWNER/umeme-backend.git /opt/company-website
               cd /opt/company-website
+              git remote set-url origin "https://github.com/$GH_OWNER/umeme-backend.git"
+              git pull --ff-only "$REPO_URL" main
+            else
+              git clone "$REPO_URL" /opt/company-website
+              cd /opt/company-website
+              git remote set-url origin "https://github.com/$GH_OWNER/umeme-backend.git"
             fi
 
             cd /opt/company-website
