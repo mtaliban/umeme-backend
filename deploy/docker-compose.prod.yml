@@ -46,6 +46,18 @@ services:
       - RECAPTCHA_SECRET=${RECAPTCHA_SECRET:-}
       - MAX_UPLOAD_MB=${MAX_UPLOAD_MB:-5}
       - FRONTEND_ORIGIN=${FRONTEND_ORIGIN}
+      # Picha ya daftari (POST /daily/{date}/scan) — funguo zinabaki kwenye `.env`.
+      - AI_PROVIDER=${AI_PROVIDER:-gemini}
+      - AI_FALLBACK=${AI_FALLBACK:-groq,claude}
+      - AI_TIMEOUT=${AI_TIMEOUT:-45}
+      - SCAN_MAX_MB=${SCAN_MAX_MB:-6}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.5-flash-lite}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_MODEL=${GROQ_MODEL:-qwen/qwen3.8-27b}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-haiku-5-5}
+      - SIGNATURE_NAME=${SIGNATURE_NAME:-Ummu Ayman}
     volumes:
       - media:/media
     healthcheck:

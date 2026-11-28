@@ -2,7 +2,7 @@
 
 import re
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import current_shop_id
 from ..db import db
@@ -118,27 +118,17 @@ async def rename_product(product_id: str, body: ProductPatch, sid=Depends(curren
     return stock.product_out(product)
 
 
-@router.delete("/products/{product_id}", status_code=204)
+@router.delete("/products/{product_id}")
 async def delete_product(product_id: str, sid=Depends(current_shop_id)):
+    """Kufuta bidhaa nzima — historia ya mauzo/risiti haiguswi."""
     product = await stock.find_product(sid, product_id)
-    for variant in product.get("variants", []):
-        qty = int(variant.get("qty", 0))
-        if qty <= 0:
-            continue
-        await stock.log_movement(
-            sid,
-            product["_id"],
-            variant["_id"],
-            variant["name"],
-            -qty,
-            0,
-            variant.get("buying", 0),
-            "delete",
-            None,
-            today_str(),
+    variant_ids = [v["_id"] for v in product.get("variants", [])]
+    if variant_ids:
+        await db.stock_movements.delete_many(
+            {"shop_id": sid, "variant_id": {"$in": variant_ids}}
         )
-    await db.products.delete_one({"_id": product["_id"]})
-    return Response(status_code=204)
+    await db.products.delete_one({"_id": product["_id"], "shop_id": sid})
+    return await stock.stock_list_payload(sid)
 
 
 @router.post("/products/{product_id}/variants", status_code=201)

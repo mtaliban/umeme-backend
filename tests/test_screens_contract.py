@@ -358,6 +358,7 @@ async def test_reports_screen_json(client, headers, shop):
         "summary",
         "products",
         "totals",
+        "expenses",
     }
     assert (report["period"], report["date"]) == ("day", DAY2)
     assert report["label"] == "Ijumaa, 20 Nov 2026"
@@ -392,6 +393,7 @@ async def test_reports_screen_json(client, headers, shop):
         "top",
         "low",
         "unsold",
+        "expense_list",
     }
     assert (week["period"], week["start"], week["end"]) == ("week", "2026-11-15", "2026-11-21")
     assert week["label"] == "15 – 21 Novemba 2026"
@@ -441,7 +443,19 @@ async def test_receipts_screen_json(client, headers, shop):
     assert (today_list["date"], today_list["count"], today_list["total"]) == (DAY2, 1, 148000)
     assert today_list["next_number"] == "0002"
     row = today_list["receipts"][0]
-    assert set(row) == {"id", "number", "customer", "location", "time", "paid"}
+    assert set(row) == {
+        "id",
+        "number",
+        "date",
+        "customer",
+        "location",
+        "time",
+        "total_qty",
+        "gross",
+        "discount",
+        "paid",
+        "shop",
+    }
     assert (row["number"], row["customer"], row["paid"]) == ("0001", "Said Hamad", 148000)
     assert re.fullmatch(r"\d{2}:\d{2}", row["time"])
 
@@ -455,6 +469,7 @@ async def test_receipts_screen_json(client, headers, shop):
         "time",
         "customer",
         "items",
+        "total_qty",
         "gross",
         "discount",
         "paid",
@@ -465,18 +480,20 @@ async def test_receipts_screen_json(client, headers, shop):
         "name": "Said Hamad",
         "phone": "0712445900",
         "location": "",
+        "address": "",
     }
     assert [(i["name"], i["amount"]) for i in one["items"]] == [
         ("Alfurqan Kanzu", 130000),
         ("Kanga za pwani", 18000),
     ]
     for item in one["items"]:
-        assert set(item) == {"name", "qty", "price", "discount", "amount"}
+        assert set(item) == {"name", "category", "qty", "price", "discount", "amount"}
     assert (one["gross"], one["discount"], one["paid"]) == (148000, 0, 148000)
     assert one["shop"] == {
         "name": "UMMU AYMAN OUTFITS",
         "phone": "0621 340 044",
         "email": "kambilatifah@gmail.com",
+        "signature_name": "Ummu Ayman",
     }
 
     res = await client.get("/receipts/history", params={"q": "said"}, headers=headers)

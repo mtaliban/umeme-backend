@@ -158,7 +158,18 @@ async def test_day_17_json(client, headers):
     assert res.status_code == 200, res.text
     data = res.json()
 
-    assert set(data) == {"period", "date", "label", "short_label", "has_prev", "has_next", "summary", "products", "totals"}
+    assert set(data) == {
+        "period",
+        "date",
+        "label",
+        "short_label",
+        "has_prev",
+        "has_next",
+        "summary",
+        "products",
+        "totals",
+        "expenses",
+    }
     assert data["period"] == "day"
     assert data["date"] == DAY_17
     assert data["label"] == "Jumanne, 17 Nov 2026"
@@ -248,7 +259,21 @@ async def test_week_bars_seven_days(client, headers):
         else:
             assert isinstance(bar["net"], int)
     assert data["summary"]["net"] == sum(b["net"] for b in data["bars"] if b["net"] is not None)
-    assert set(data) == {"period", "start", "end", "label", "short_label", "has_prev", "has_next", "summary", "bars", "top", "low", "unsold"}
+    assert set(data) == {
+        "period",
+        "start",
+        "end",
+        "label",
+        "short_label",
+        "has_prev",
+        "has_next",
+        "summary",
+        "bars",
+        "top",
+        "low",
+        "unsold",
+        "expense_list",
+    }
 
 
 async def test_past_week_has_next(client, headers):

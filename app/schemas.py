@@ -2,6 +2,10 @@
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# `client_id` ni hiari: simu inaweza kutuma ombi lile lile mara mbili (offline
+# sync) — server haitoi kuandika mara ya pili. Herufi 32 kwa mwisho.
+ClientId = Field(default=None, max_length=32)
+
 
 class PinIn(BaseModel):
     pin: str
@@ -41,7 +45,12 @@ class VariantIn(BaseModel):
 
 
 class VariantPatch(BaseModel):
-    add_qty: int = 0
+    model_config = ConfigDict(extra="allow")
+
+    # `/variants/{id}` ya zamani inaendelea kutumia add_qty; sehemu 1.1
+    # inatumia `qty` (idadi mpya kamili) kwenye `/stock/variants/{id}`.
+    add_qty: int | None = None
+    qty: int | None = None
     buying: int | None = None
     selling: int | None = None
     name: str | None = None
@@ -70,6 +79,7 @@ class DailyLineAdd(BaseModel):
     qty: int | None = None          # lazima
     selling: int | None = None      # lazima
     buying: int | None = None       # lazima kama variant_id ni None
+    client_id: str | None = ClientId
 
 
 class DailyLineEdit(BaseModel):
@@ -83,6 +93,7 @@ class DailyExpenseAdd(BaseModel):
 
     name: str | None = None
     amount: int | None = None
+    client_id: str | None = ClientId
 
 
 class DailyExpenseEdit(BaseModel):
@@ -99,7 +110,9 @@ class CustomerIn(BaseModel):
 
     name: str = ""
     phone: str = ""
-    location: str = ""  # hiari — huhifadhiwa kama "" ikiwa haitumwa
+    # Nyumbani kwa mteja. `location` ni jina la zamani — linapokewa pia.
+    address: str = ""
+    location: str = ""
 
 
 class ReceiptItemIn(BaseModel):
@@ -119,3 +132,4 @@ class ReceiptIn(BaseModel):
     date: str | None = None          # None = leo; server inakataa siku ijayo
     customer: CustomerIn = Field(default_factory=CustomerIn)
     items: list[ReceiptItemIn] = Field(default_factory=list)
+    client_id: str | None = ClientId

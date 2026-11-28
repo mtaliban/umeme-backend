@@ -50,9 +50,10 @@ class VariantIn(BaseModel):
 class VariantPatch(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    add_qty: int | None = None
+    qty: int | None = None          # idadi mpya KAMILI (haiongezwi)
     buying: int | None = None
     selling: int | None = None
+    add_qty: int | None = None      # imeondolewa — ikipewa ni 422 "Tumia qty"
 
 
 def _qty(value) -> int:
@@ -125,37 +126,7 @@ def _no_variants(product: dict) -> bool:
 # ---------- K0
 @router.get("")
 async def stock_list(sid=Depends(current_shop_id)):
-    out: list[dict] = []
-    total_qty = 0
-    total_capital = 0
-    total_variants = 0
-    async for product in db.products.find({"shop_id": sid}):
-        variants = product.get("variants", [])
-        qty = sum(max(int(v.get("qty", 0)), 0) for v in variants)
-        capital = sum(max(int(v.get("qty", 0)), 0) * int(v.get("buying", 0)) for v in variants)
-        out.append(
-            {
-                "id": str(product["_id"]),
-                "name": product["name"],
-                "has_variants": not _no_variants(product),
-                "variants": len(variants),
-                "qty": qty,
-                "capital": capital,
-            }
-        )
-        total_qty += qty
-        total_capital += capital
-        total_variants += len(variants)
-    out.sort(key=lambda p: p["name"].lower())
-    return {
-        "summary": {
-            "products": len(out),
-            "variants": total_variants,
-            "qty": total_qty,
-            "capital": total_capital,
-        },
-        "products": out,
-    }
+    return await stock.stock_list_payload(sid)
 
 
 # ---------- K1
@@ -271,9 +242,10 @@ async def edit_variant(variant_id: str, body: VariantPatch, sid=Depends(current_
         err(404, "Haipo")
     variant = next(v for v in product.get("variants", []) if v["_id"] == vid)
 
-    add_qty = int(body.add_qty or 0)
-    if body.add_qty is not None and add_qty < 1:
-        err(422, "Jaza idadi")
+    # Sehemu 1.1: idadi inayotumwa ni idadi mpya kamili.
+    if body.add_qty is not None:
+        err(422, "Tumia qty")
+    qty = _qty(body.qty) if body.qty is not None else None
     buying = _buying(body.buying) if body.buying is not None else None
     selling = _selling(body.selling) if body.selling is not None else None
 
@@ -282,27 +254,66 @@ async def edit_variant(variant_id: str, body: VariantPatch, sid=Depends(current_
         sets["variants.$.buying"] = buying
     if selling is not None:
         sets["variants.$.selling"] = selling
-    update: dict = {"$set": sets}
-    if add_qty:
-        update["$inc"] = {"variants.$.qty": add_qty}
+    if qty is not None:
+        sets["variants.$.qty"] = qty
 
     await db.products.update_one(
-        {"_id": product["_id"], "shop_id": sid, "variants._id": vid}, update
+        {"_id": product["_id"], "shop_id": sid, "variants._id": vid}, {"$set": sets}
     )
 
-    if add_qty:
-        await stock.log_movement(
-            sid,
-            product["_id"],
-            vid,
-            variant["name"],
-            add_qty,
-            int(variant.get("qty", 0)) + add_qty,
-            buying if buying is not None else int(variant.get("buying", 0)),
-            "restock",
-            None,
-            today_str(),
-        )
+    # Mwendo wa stock ni TOFAUTI (delta), si idadi mpya: 5 -> 1 huandikwa -4.
+    if qty is not None:
+        delta = qty - int(variant.get("qty", 0))
+        if delta != 0:
+            await stock.log_movement(
+                sid,
+                product["_id"],
+                vid,
+                variant["name"],
+                delta,
+                qty,
+                buying if buying is not None else int(variant.get("buying", 0)),
+                "restock" if delta > 0 else "adjust",
+                None,
+                today_str(),
+            )
 
     product = await _product(sid, str(product["_id"]))
     return _detail(product)
+
+
+# ---------- K5 — kufuta aina moja
+@router.delete("/variants/{variant_id}")
+async def delete_variant(variant_id: str, sid=Depends(current_shop_id)):
+    try:
+        vid = ObjectId(str(variant_id))
+    except Exception:
+        err(404, "Haipo")
+    product = await db.products.find_one({"shop_id": sid, "variants._id": vid})
+    if not product:
+        err(404, "Haipo")
+    if _no_variants(product):
+        err(400, "Futa bidhaa nzima")
+
+    # Aina na mwendo wake wa stock peke yake; historia ya mauzo haiguswi.
+    await db.products.update_one(
+        {"_id": product["_id"], "shop_id": sid},
+        {"$pull": {"variants": {"_id": vid}}, "$set": {"updated_at": now()}},
+    )
+    await db.stock_movements.delete_many({"shop_id": sid, "variant_id": vid})
+
+    return _detail(await _product(sid, str(product["_id"])))
+
+
+# ---------- K6 — kufuta bidhaa nzima
+@router.delete("/products/{product_id}")
+async def delete_product(product_id: str, sid=Depends(current_shop_id)):
+    product = await _product(sid, product_id)
+    variant_ids = [v["_id"] for v in product.get("variants", [])]
+    if variant_ids:
+        await db.stock_movements.delete_many(
+            {"shop_id": sid, "variant_id": {"$in": variant_ids}}
+        )
+    # Historia ya mauzo na risiti HAIGUSWI (mistari ya zamani inabaki).
+    await db.products.delete_one({"_id": product["_id"], "shop_id": sid})
+    return await stock_list(sid)

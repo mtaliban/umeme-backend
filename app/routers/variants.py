@@ -48,6 +48,13 @@ async def patch_variant(variant_id: str, body: VariantPatch, sid=Depends(current
                 raise HTTPException(400, "Bei si sahihi")
             sets[f"variants.$.{field}"] = int(value)
 
+    if body.add_qty is None and body.qty is not None:
+        # Sehemu 1.1: `qty` ni idadi mpya kamili — mwendo ni tofauti yake.
+        if int(body.qty) < 0:
+            raise HTTPException(422, "Jaza idadi")
+        current = await stock.variant_qty(sid, pid, vid)
+        body.add_qty = int(body.qty) - current
+
     add_qty = int(body.add_qty or 0)
     buying = int(body.buying if body.buying is not None else variant.get("buying", 0) or 0)
 

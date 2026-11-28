@@ -98,7 +98,12 @@ async def test_17_receipt_customer_location(client, headers):
     res = await client.post("/receipts", json=receipt_body(vid), headers=headers)
     assert res.status_code == 201, res.text
     first = res.json()
-    assert first["customer"] == {"name": "", "phone": "", "location": ""}
+    assert first["customer"] == {
+        "name": "",
+        "phone": "",
+        "location": "",
+        "address": "",
+    }
     one = (await client.get(f"/receipts/{first['id']}", headers=headers)).json()
     assert one["customer"]["location"] == ""
     assert one["customer"]["location"] is not None

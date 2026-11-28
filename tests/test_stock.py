@@ -181,7 +181,7 @@ async def test_restock_records_movement(client, headers):
     detail = await add_variant(client, headers, product["id"], "Abaya nyeusi", 5, 7000, 11000)
     vid = detail["variants"][0]["id"]
 
-    res = await client.patch(f"/stock/variants/{vid}", json={"add_qty": 10}, headers=headers)
+    res = await client.patch(f"/stock/variants/{vid}", json={"qty": 15}, headers=headers)
     assert res.status_code == 200, res.text
     detail = res.json()
     assert detail["variants"][0]["qty"] == 15

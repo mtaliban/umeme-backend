@@ -6,8 +6,10 @@ from datetime import date, timedelta
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pymongo import ReturnDocument
+from pymongo.errors import DuplicateKeyError
 
 from ..auth import current_shop_id
+from ..config import settings
 from ..db import db
 from ..schemas import ReceiptIn
 from ..services import notify, stock, tx
@@ -30,10 +32,13 @@ LIVE = {"status": {"$ne": "cancelled"}, "cancelled": {"$ne": True}}
 
 
 def _customer(receipt: dict) -> dict:
-    customer = {"name": "", "phone": "", "location": ""}
+    customer = {"name": "", "phone": "", "location": "", "address": ""}
     customer.update({k: v for k, v in (receipt.get("customer") or {}).items() if k != "_id"})
-    # Risiti za zamani zisizo na location zirudishe "" (sio None).
-    customer["location"] = str(customer.get("location") or "").strip()
+    # `address` ni jina jipya; risiti/ombi la zamani linatumia `location`.
+    # Zote mbili zinarudishwa, tupu ni "" (sio None).
+    address = str(customer.get("address") or customer.get("location") or "").strip()
+    customer["address"] = address
+    customer["location"] = address
     return customer
 
 
@@ -50,6 +55,8 @@ def _shop_public(shop: dict | None) -> dict:
         "name": shop.get("name", "UMMU AYMAN OUTFITS"),
         "phone": shop.get("phone", ""),
         "email": shop.get("email", ""),
+        # Jina la muuzaji linalochapishwa kwenye risiti.
+        "signature_name": shop.get("signature_name") or settings.signature_name,
     }
 
 
@@ -63,6 +70,8 @@ def receipt_out(receipt: dict, shop: dict | None = None) -> dict:
         items.append(
             {
                 "name": it["name"],
+                # Jina la bidhaa kuu (mfano "Abaya") — liliwekwa wakati wa kuunda.
+                "category": str(it.get("category") or ""),
                 "qty": qty,
                 "price": price,
                 "discount": discount,
@@ -78,6 +87,7 @@ def receipt_out(receipt: dict, shop: dict | None = None) -> dict:
         "time": receipt.get("time") or _fmt_time(receipt.get("created_at")),
         "customer": _customer(receipt),
         "items": items,
+        "total_qty": sum(i["qty"] for i in items),
         "gross": gross,
         "discount": discount_total,
         "paid": gross - discount_total,
@@ -85,14 +95,26 @@ def receipt_out(receipt: dict, shop: dict | None = None) -> dict:
     }
 
 
-def receipt_row(receipt: dict) -> dict:
-    """Mstari wa TodayList / History (C0/C3)."""
+def receipt_row(receipt: dict, shop: dict | None = None) -> dict:
+    """Mstari wa TodayList / History (C0/C3).
+
+    `customer` linabaki jina (string) kwa app ya zamani; fields za risiti
+    zinaongezwa bila kubadilisha yaliyopo.
+    """
+    items = receipt.get("items", [])
+    gross = sum(int(it["qty"]) * int(it["price"]) for it in items)
+    discount = sum(int(it["qty"]) * int(it.get("discount", 0) or 0) for it in items)
     return {
         "id": str(receipt["_id"]),
         "number": receipt["number"],
+        "date": receipt["date"],
         "customer": _customer(receipt)["name"] or "Mteja",
         "time": receipt.get("time") or _fmt_time(receipt.get("created_at")),
-        "paid": _paid(receipt),
+        "total_qty": sum(int(it["qty"]) for it in items),
+        "gross": gross,
+        "discount": discount,
+        "paid": gross - discount,
+        "shop": _shop_public(shop),
     }
 
 
@@ -102,13 +124,13 @@ def receipt_row(receipt: dict) -> dict:
 async def list_receipts(date: str | None = None, sid=Depends(current_shop_id)):
     """TodayList (C0)."""
     day = parse_day(date).isoformat()
+    shop = await db.shops.find_one({"_id": sid}) or {}
     rows = []
     async for receipt in db.receipts.find({"shop_id": sid, "date": day, **LIVE}).sort("number", -1):
-        row = receipt_row(receipt)
+        row = receipt_row(receipt, shop)
         # TodayList: location ile ile iliyohifadhiwa kwenye risiti.
         row["location"] = _customer(receipt)["location"]
         rows.append(row)
-    shop = await db.shops.find_one({"_id": sid}) or {}
     return {
         "date": day,
         "receipts": rows,
@@ -151,6 +173,7 @@ async def receipts_history(
     days: list[dict] = []
     index: dict[str, dict] = {}
     t = today()
+    shop = await db.shops.find_one({"_id": sid})
     for receipt in receipts_list:
         day_str = receipt["date"]
         if day_str not in index:
@@ -164,7 +187,7 @@ async def receipts_history(
                 label = base
             index[day_str] = {"date": day_str, "label": label, "total": 0, "receipts": []}
             days.append(index[day_str])
-        row = receipt_row(receipt)
+        row = receipt_row(receipt, shop)
         index[day_str]["receipts"].append(row)
         index[day_str]["total"] += row["paid"]
 
@@ -173,7 +196,7 @@ async def receipts_history(
 
 # ── POST /receipts ────────────────────────────────────────────────────────────
 
-async def _persist(sid, customer, items, day, session=None) -> dict:
+async def _persist(sid, customer, items, day, session=None, client_id=None) -> dict:
     """Punguza stock (ya stock peke yake), chukua namba, hifadhi risiti."""
     applied: list[tuple] = []
     seq_taken = False
@@ -241,10 +264,15 @@ async def _persist(sid, customer, items, day, session=None) -> dict:
             "items": [{k: v for k, v in item.items() if k != "qty_after"} for item in items],
             "totals": totals,
         }
+        if client_id:
+            receipt["client_id"] = client_id
         result = await db.receipts.insert_one(receipt, session=session)
         receipt["_id"] = result.inserted_id
         return receipt
     except HTTPException:
+        await rollback()
+        raise
+    except DuplicateKeyError:
         await rollback()
         raise
     except Exception:
@@ -257,6 +285,13 @@ async def create_receipt(body: ReceiptIn, request: Request, sid=Depends(current_
     if not body.items:
         raise HTTPException(422, "Weka bidhaa angalau moja")
 
+    # Awamu 2: ombi lile lile (client_id ile ile) lisitoe risiti mbili.
+    client_id = (body.client_id or "").strip() or None
+    if client_id:
+        existing = await db.receipts.find_one({"shop_id": sid, "client_id": client_id})
+        if existing:
+            return receipt_out(existing, await db.shops.find_one({"_id": sid}))
+
     day = parse_day(body.date)
     if day > today():
         raise HTTPException(400, "Huwezi kuandika siku ijayo")
@@ -266,7 +301,9 @@ async def create_receipt(body: ReceiptIn, request: Request, sid=Depends(current_
     customer["name"] = str(customer.get("name") or "").strip()
     customer["phone"] = str(customer.get("phone") or "").strip()
     # Hiari: haisababishi 422; tupu/None → "" (sio None), trim na kikomo cha 120.
-    customer["location"] = str(customer.get("location") or "").strip()[:120]
+    address = str(customer.get("address") or customer.get("location") or "").strip()[:120]
+    customer["address"] = address
+    customer["location"] = address  # jina la zamani — linabaki kwa app ya zamani
 
     items: list[dict] = []
 
@@ -290,6 +327,7 @@ async def create_receipt(body: ReceiptIn, request: Request, sid=Depends(current_
                     "variant_id": None,
                     "product_id": None,
                     "name": name,
+                    "category": name,
                     "qty": int(line.qty),
                     "price": int(line.price),
                     "discount": int(line.discount),
@@ -304,6 +342,8 @@ async def create_receipt(body: ReceiptIn, request: Request, sid=Depends(current_
                     "product_id": product["_id"],
                     "variant_id": variant["_id"],
                     "name": variant["name"],
+                    # Jina la bidhaa kuu (mfano "Abaya"), si la aina.
+                    "category": product["name"],
                     "qty": int(line.qty),
                     "price": int(line.price),
                     "discount": int(line.discount),
@@ -312,11 +352,22 @@ async def create_receipt(body: ReceiptIn, request: Request, sid=Depends(current_
                 }
             )
 
-    if await tx.supported():
-        async with tx.transaction() as session:
-            receipt = await _persist(sid, customer, items, day.isoformat(), session)
-    else:
-        receipt = await _persist(sid, customer, items, day.isoformat(), None)
+    try:
+        if await tx.supported():
+            async with tx.transaction() as session:
+                receipt = await _persist(
+                    sid, customer, items, day.isoformat(), session, client_id
+                )
+        else:
+            receipt = await _persist(sid, customer, items, day.isoformat(), None, client_id)
+    except DuplicateKeyError:
+        # Ombi lile lile lilifika wakati mmoja — rudisha risiti ya kwanza.
+        if not client_id:
+            raise
+        existing = await db.receipts.find_one({"shop_id": sid, "client_id": client_id})
+        if not existing:
+            raise HTTPException(409, "Risiti imeshafanyika")
+        return receipt_out(existing, await db.shops.find_one({"_id": sid}))
 
     device_token = request.headers.get("x-device-token")
     await notify.send(

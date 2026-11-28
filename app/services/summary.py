@@ -48,6 +48,22 @@ async def sheet(sid, day: str) -> dict | None:
     return await db.daily_sheets.find_one({"shop_id": sid, "date": day})
 
 
+async def has_data_before(sid, day: str) -> bool:
+    """Je, kuna data yoyote (mistari, gharama au risiti) kabla ya siku hii?"""
+    if await db.daily_sheets.find_one(
+        {
+            "shop_id": sid,
+            "date": {"$lt": day},
+            "$or": [{"lines.0": {"$exists": True}}, {"expenses.0": {"$exists": True}}],
+        },
+        {"_id": 1},
+    ):
+        return True
+    if await db.receipts.find_one({"shop_id": sid, "date": {"$lt": day}, **LIVE}, {"_id": 1}):
+        return True
+    return False
+
+
 async def day_summary(sid, day: str) -> dict:
     sales = capital = expenses = 0
     async for r in db.receipts.find({"shop_id": sid, "date": day, **LIVE}, {"totals": 1}):
@@ -238,6 +254,9 @@ def sheet_out(doc: dict | None, buying_by_variant: dict | None = None) -> dict:
                     line.get("stock_taken", 0 if line.get("out_of_stock") else line["qty"]) or 0
                 ),
                 "out_of_stock": bool(line.get("out_of_stock")),
+                # Mistari ya mkono haina risiti; app inasoma fields hizi zote.
+                "receipt_no": line.get("receipt_no"),
+                "receipt_id": line.get("receipt_id"),
             }
         )
     expenses = []
@@ -245,6 +264,9 @@ def sheet_out(doc: dict | None, buying_by_variant: dict | None = None) -> dict:
         exp = dict(e)
         exp.pop("_id", None)
         exp.pop("created_at", None)
+        # client_id ni kwa ukaguzi wa offline retry pekee — haionyeshwi kwa app.
+        exp.pop("client_id", None)
+        exp.pop("scan_id", None)
         if "id" not in exp:
             exp["id"] = ""
         expenses.append(exp)

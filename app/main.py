@@ -8,10 +8,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
-from fastapi.security import HTTPBearer
+from starlette.middleware.gzip import GZipMiddleware
 
 from . import jobs
 from .db import create_indexes, db
+from .middleware import TimingMiddleware
 from .routers import (
     auth,
     daily,
@@ -22,6 +23,7 @@ from .routers import (
     products,
     receipts,
     reports,
+    scan,
     stock,
     test_reset,
     variants,
@@ -47,6 +49,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="UMMU AYMAN OUTFITS", version="1.0.0", lifespan=lifespan)
 
+# Gzip ya app (sehemu 7.1): mtandao wa duka ni wa polepole, JSON ipungue.
+# Caddy haina `encode gzip` — compression ipo hapa pekee.
+app.add_middleware(GZipMiddleware, minimum_size=500)
+# X-Time-Ms + log ya tahadhari kwa ombi lililozidi 800 ms.
+app.add_middleware(TimingMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -66,6 +74,9 @@ FIELD_MESSAGES = {
     "amount": "Jaza kiasi",
     "discount": "Punguzo si sahihi",
     "name": "Jaza jina",
+    "address": "Andika anwani",
+    "image": "Picha si sahihi",
+    "client_id": "Ombi si sahihi",
 }
 
 
@@ -102,6 +113,7 @@ for module in (
     stock,
     variants,
     daily,
+    scan,
     expenses,
     receipts,
     reports,

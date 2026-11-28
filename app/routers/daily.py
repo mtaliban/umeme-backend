@@ -1,4 +1,4 @@
-"""Mauzo ya leo: daftari (mistari + gharama) kwa mstari mmoja mmoja."""
+"""Mauzo ya siku: daftari (mistari + gharama) kwa mstari mmoja mmoja."""
 
 from collections import defaultdict
 from datetime import date, timedelta
@@ -11,7 +11,15 @@ from ..db import db
 from ..schemas import DailyExpenseAdd, DailyExpenseEdit, DailyIn, DailyLineAdd, DailyLineEdit
 from ..services import stock, tx
 from ..services import summary as summary_service
-from ..tz import DAY_NAMES, MONTH_NAMES, MONTH_SHORT, now, parse_day, today
+from ..tz import (
+    DAY_NAMES,
+    MONTH_NAMES,
+    MONTH_SHORT,
+    month_end,
+    now,
+    parse_day,
+    today,
+)
 
 router = APIRouter(tags=["daily"])
 
@@ -39,6 +47,153 @@ def _ensure_open(doc: dict | None) -> None:
     """Siku iliyofungwa (saved_at) hairuhusiwi kubadilishwa — 409."""
     if doc and doc.get("saved_at"):
         raise HTTPException(409, "Siku imehifadhiwa — bonyeza Hariri kwanza")
+
+
+async def _seen(sid, day_str: str, key: str, client_id: str | None) -> bool:
+    """Je, ombi lenye `client_id` hili limeshafanyika? (Awamu 2 — offline retry).
+
+    Ukaguzi huu ni KABLA ya stock kupunguzwa; vinginevyo stock inapungua mara
+    mbili na risiti/gharama zinaingia mara mbili.
+    """
+    if not client_id:
+        return False
+    doc = await _sheet(sid, day_str)
+    return any(item.get("client_id") == client_id for item in (doc or {}).get(key, []))
+
+
+# ── Msingi mmoja wa kuandika mstari (wa mkono NA wa picha/scan) ───────────────
+
+async def create_line(
+    sid,
+    day_str: str,
+    *,
+    qty: int,
+    selling: int,
+    buying: int | None = None,
+    name: str | None = None,
+    variant_id: str | None = None,
+    client_id: str | None = None,
+    scan_id: str | None = None,
+) -> None:
+    """Ongeza mstari wa mauzo — hii ni njia moja tu inayotumika kila mahali."""
+    qty = int(qty)
+    selling = int(selling)
+    out_of_stock = variant_id is None
+    qty_after = None
+    stock_taken = 0
+    line_id = str(ObjectId())
+
+    if out_of_stock:
+        name = (name or "").strip()
+        if not name:
+            raise HTTPException(422, "Jaza jina la bidhaa")
+        if buying is None or int(buying) <= 0:
+            raise HTTPException(422, "Jaza buying")
+        buying_value = int(buying)
+        line = {
+            "id": line_id,
+            "variant_id": None,
+            "product_id": None,
+            "name": name,
+            "qty": qty,
+            "selling": selling,
+            "buying": buying_value,
+            "stock_taken": 0,
+            "out_of_stock": True,
+            "created_at": now(),
+        }
+    else:
+        product, variant = await stock.find_variant(sid, variant_id)
+        # Snapshot ya mstari: buying ya mauzo haya inaweza kutofautiana na stock.
+        if buying is not None:
+            if int(buying) < 0:
+                raise HTTPException(422, "Jaza buying")
+            buying_value = int(buying)
+        else:
+            buying_value = int(variant.get("buying", 0))
+        stock_taken, qty_after = await stock.take_stock(
+            sid,
+            product["_id"],
+            variant["_id"],
+            qty,
+            variant["name"],
+            buying_value,
+            "daily",
+            line_id,
+            day_str,
+        )
+        line = {
+            "id": line_id,
+            "variant_id": variant["_id"],
+            "product_id": product["_id"],
+            "name": variant["name"],
+            "qty": qty,
+            "selling": selling,
+            "buying": buying_value,
+            "stock_selling": int(variant.get("selling", 0)),
+            "stock_taken": stock_taken,
+            "out_of_stock": False,
+            "created_at": now(),
+        }
+
+    if client_id:
+        line["client_id"] = client_id
+    if scan_id:
+        line["scan_id"] = scan_id
+
+    await db.daily_sheets.update_one(
+        {"shop_id": sid, "date": day_str},
+        {
+            "$push": {"lines": line},
+            "$set": {"updated_at": now()},
+            "$setOnInsert": {"shop_id": sid, "date": day_str, "expenses": [], "saved_at": None},
+        },
+        upsert=True,
+    )
+
+    if qty_after is not None:
+        await stock.check_stock(sid, line["name"], qty_after)
+
+
+async def create_expense(
+    sid,
+    day_str: str,
+    *,
+    name: str,
+    amount: int,
+    client_id: str | None = None,
+    extra: dict | None = None,
+    scan_id: str | None = None,
+) -> None:
+    """Ongeza gharama — njia moja inayotumika kwa mkono na kwa picha."""
+    name = (name or "").strip()
+    if not name:
+        raise HTTPException(422, "Jaza jina la gharama")
+    if amount is None or int(amount) <= 0:
+        raise HTTPException(422, "Jaza kiasi")
+
+    expense = {
+        "id": str(ObjectId()),
+        "name": name,
+        "amount": int(amount),
+        "created_at": now(),
+    }
+    for key, value in (extra or {}).items():
+        expense[key] = value
+    if client_id:
+        expense["client_id"] = client_id
+    if scan_id:
+        expense["scan_id"] = scan_id
+
+    await db.daily_sheets.update_one(
+        {"shop_id": sid, "date": day_str},
+        {
+            "$push": {"expenses": expense},
+            "$set": {"updated_at": now()},
+            "$setOnInsert": {"shop_id": sid, "date": day_str, "lines": [], "saved_at": None},
+        },
+        upsert=True,
+    )
 
 
 # ── GET /daily/history ────────────────────────────────────────────────────────
@@ -121,6 +276,56 @@ async def daily_history(
     }
 
 
+# ── GET /daily/calendar ───────────────────────────────────────────────────────
+# Lazima iwekwe JUU ya /daily/{date} ili "calendar" isichukuliwe kama tarehe.
+
+@router.get("/daily/calendar")
+async def daily_calendar(month: str | None = None, sid=Depends(current_shop_id)):
+    today_d = today()
+    if month:
+        try:
+            year_text, month_text = str(month).split("-")
+            first = date(int(year_text), int(month_text), 1)
+        except Exception:
+            raise HTTPException(422, "Tarehe si sahihi")
+    else:
+        first = date(today_d.year, today_d.month, 1)
+
+    if (first.year, first.month) > (today_d.year, today_d.month):
+        raise HTTPException(400, "Huwezi kuchagua mwezi ujao")
+
+    last = month_end(first.year, first.month)
+    start_str, end_str = first.isoformat(), last.isoformat()
+
+    days: set[str] = set()
+    async for doc in db.daily_sheets.find(
+        {
+            "shop_id": sid,
+            "date": {"$gte": start_str, "$lte": end_str},
+            "$or": [
+                {"lines.0": {"$exists": True}},
+                {"expenses.0": {"$exists": True}},
+            ],
+        },
+        {"date": 1},
+    ):
+        days.add(doc["date"])
+    async for receipt in db.receipts.find(
+        {"shop_id": sid, "date": {"$gte": start_str, "$lte": end_str}, **summary_service.LIVE},
+        {"date": 1},
+    ):
+        days.add(receipt["date"])
+
+    return {
+        "month": f"{first.year}-{first.month:02d}",
+        "label": f"{MONTH_NAMES[first.month - 1]} {first.year}",
+        "today": today_d.isoformat(),
+        "days": sorted(days),
+        "has_prev": await summary_service.has_data_before(sid, start_str),
+        "has_next": (first.year, first.month) < (today_d.year, today_d.month),
+    }
+
+
 # ── GET /daily/{date} ─────────────────────────────────────────────────────────
 
 @router.get("/daily/{date}")
@@ -137,6 +342,10 @@ async def add_line(date: str, body: DailyLineAdd, sid=Depends(current_shop_id)):
         raise HTTPException(400, "Huwezi kuandika siku ijayo")
     day_str = day.isoformat()
 
+    # Offline retry: ombi lile lile lisijirudie (kabla ya stock).
+    if await _seen(sid, day_str, "lines", body.client_id):
+        return await daily_payload(sid, day_str)
+
     if body.qty is None or int(body.qty) <= 0:
         raise HTTPException(422, "Jaza idadi")
     if body.selling is None or int(body.selling) <= 0:
@@ -144,81 +353,16 @@ async def add_line(date: str, body: DailyLineAdd, sid=Depends(current_shop_id)):
 
     _ensure_open(await _sheet(sid, day_str))
 
-    qty = int(body.qty)
-    selling = int(body.selling)
-    out_of_stock = body.variant_id is None
-    qty_after = None
-    stock_taken = 0
-    line_id = str(ObjectId())
-
-    if out_of_stock:
-        name = (body.name or "").strip()
-        if not name:
-            raise HTTPException(422, "Jaza jina la bidhaa")
-        if body.buying is None or int(body.buying) <= 0:
-            raise HTTPException(422, "Jaza buying")
-        buying = int(body.buying)
-        line = {
-            "id": line_id,
-            "variant_id": None,
-            "product_id": None,
-            "name": name,
-            "qty": qty,
-            "selling": selling,
-            "buying": buying,
-            "stock_taken": 0,
-            "out_of_stock": True,
-            "created_at": now(),
-        }
-    else:
-        product, variant = await stock.find_variant(sid, body.variant_id)
-        # Snapshot ya mstari: buying ya mauzo haya inaweza kutofautiana na stock.
-        # variants.buying, stock_selling na selling za stock hazibadiliki.
-        if body.buying is not None:
-            if int(body.buying) < 0:
-                raise HTTPException(422, "Jaza buying")
-            buying = int(body.buying)
-        else:
-            buying = int(variant.get("buying", 0))
-        stock_taken, qty_after = await stock.take_stock(
-            sid,
-            product["_id"],
-            variant["_id"],
-            qty,
-            variant["name"],
-            buying,
-            "daily",
-            line_id,
-            day_str,
-        )
-        line = {
-            "id": line_id,
-            "variant_id": variant["_id"],
-            "product_id": product["_id"],
-            "name": variant["name"],
-            "qty": qty,
-            "selling": selling,
-            "buying": buying,
-            "stock_selling": int(variant.get("selling", 0)),
-            "stock_taken": stock_taken,
-            "out_of_stock": False,
-            "created_at": now(),
-        }
-
-    ts = now()
-    await db.daily_sheets.update_one(
-        {"shop_id": sid, "date": day_str},
-        {
-            "$push": {"lines": line},
-            "$set": {"updated_at": ts},
-            "$setOnInsert": {"shop_id": sid, "date": day_str, "expenses": [], "saved_at": None},
-        },
-        upsert=True,
+    await create_line(
+        sid,
+        day_str,
+        qty=int(body.qty),
+        selling=int(body.selling),
+        buying=body.buying,
+        name=body.name,
+        variant_id=body.variant_id,
+        client_id=body.client_id,
     )
-
-    if qty_after is not None:
-        await stock.check_stock(sid, line["name"], qty_after)
-
     return await daily_payload(sid, day_str)
 
 
@@ -353,6 +497,9 @@ async def add_expense(date: str, body: DailyExpenseAdd, sid=Depends(current_shop
         raise HTTPException(400, "Huwezi kuandika siku ijayo")
     day_str = day.isoformat()
 
+    if await _seen(sid, day_str, "expenses", body.client_id):
+        return await daily_payload(sid, day_str)
+
     name = (body.name or "").strip()
     if not name:
         raise HTTPException(422, "Jaza jina la gharama")
@@ -361,18 +508,18 @@ async def add_expense(date: str, body: DailyExpenseAdd, sid=Depends(current_shop
 
     _ensure_open(await _sheet(sid, day_str))
 
-    extra = {k: v for k, v in body.model_dump(exclude={"name", "amount"}).items() if v is not None}
-    expense = {"id": str(ObjectId()), "name": name, "amount": int(body.amount), "created_at": now(), **extra}
-
-    ts = now()
-    await db.daily_sheets.update_one(
-        {"shop_id": sid, "date": day_str},
-        {
-            "$push": {"expenses": expense},
-            "$set": {"updated_at": ts},
-            "$setOnInsert": {"shop_id": sid, "date": day_str, "lines": [], "saved_at": None},
-        },
-        upsert=True,
+    extra = {
+        k: v
+        for k, v in body.model_dump(exclude={"name", "amount", "client_id"}).items()
+        if v is not None
+    }
+    await create_expense(
+        sid,
+        day_str,
+        name=name,
+        amount=int(body.amount),
+        client_id=body.client_id,
+        extra=extra,
     )
 
     return await daily_payload(sid, day_str)
@@ -405,7 +552,11 @@ async def edit_expense(
         if int(body.amount) <= 0:
             raise HTTPException(422, "Jaza kiasi")
         updates["expenses.$.amount"] = int(body.amount)
-    extra = {k: v for k, v in (body.model_dump(exclude={"name", "amount"}) or {}).items() if v is not None}
+    extra = {
+        k: v
+        for k, v in (body.model_dump(exclude={"name", "amount"}) or {}).items()
+        if v is not None
+    }
     for k, v in extra.items():
         updates[f"expenses.$.{k}"] = v
 

@@ -66,6 +66,45 @@ async def _rows(sid, start: str, end: str) -> tuple[list[tuple], dict[str, int]]
     return out, dict(expenses)
 
 
+async def _expense_entries(sid, start: str, end: str) -> list[tuple[str, str, int]]:
+    """Gharama zote za kipindi kwa mpangilio zilivyoandikwa: (date, name, amount)."""
+    entries: list[tuple[str, str, int]] = []
+    async for sheet in db.daily_sheets.find(
+        {"shop_id": sid, "date": {"$gte": start, "$lte": end}}
+    ).sort("date", 1):
+        for expense in sheet.get("expenses") or []:
+            entries.append(
+                (
+                    sheet["date"],
+                    str(expense.get("name") or "").strip(),
+                    int(expense.get("amount", 0) or 0),
+                )
+            )
+    return entries
+
+
+def _expense_groups(entries: list[tuple[str, str, int]]) -> list[dict]:
+    """Gharama zilizounganishwa kwa jina — kiasi kikubwa kwanza.
+
+    Majina yalinganishwe bila herufi kubwa/ndogo na nafasi za pembeni; jina
+    linalotumika ni lile la kwanza lililoonekana. Gharama isiyo na jina ni
+    "Gharama".
+    """
+    bucket: dict[str, dict] = {}
+    for _, name, amount in entries:
+        label = (name or "").strip()
+        key = label.lower()
+        if not key:
+            label, key = "Gharama", "gharama"
+        item = bucket.get(key)
+        if item is None:
+            bucket[key] = {"name": label, "count": 1, "amount": int(amount)}
+        else:
+            item["count"] += 1
+            item["amount"] += int(amount)
+    return sorted(bucket.values(), key=lambda g: (-g["amount"], g["name"].lower()))
+
+
 def _summary(rows: list[tuple], expenses: int) -> dict:
     sales = sum(qty * selling for _, _, _, qty, selling, _ in rows)
     capital = sum(qty * buying for _, _, _, qty, _, buying in rows)
@@ -136,6 +175,7 @@ async def build_day(sid, day: date) -> dict:
     rows, expenses = await _rows(sid, day_str, day_str)
     products = _by_name(rows)
     summary = _summary(rows, expenses.get(day_str, 0))
+    entries = await _expense_entries(sid, day_str, day_str)
 
     return {
         "period": "day",
@@ -145,6 +185,10 @@ async def build_day(sid, day: date) -> dict:
         "has_prev": await _has_data_before(sid, day),
         "has_next": day < today(),
         "summary": summary,
+        # Gharama za siku kwa mpangilio zilivyoandikwa.
+        "expenses": [
+            {"name": name or "Gharama", "amount": amount} for _, name, amount in entries
+        ],
         "products": [
             {
                 "name": p["name"],
@@ -165,15 +209,23 @@ async def build_day(sid, day: date) -> dict:
 
 # ── P2–P4: PeriodReport ──────────────────────────────────────────────────────
 
-def _chunks(period: str, anchor: date) -> tuple[date, date, list[tuple], str, str]:
+def _chunks(period: str, anchor: date) -> tuple[date, date, list[dict], str, str]:
+    """Vipindi vidogo vya ripoti: key, name, label, start, end."""
     if period == "week":
         start = _week_start(anchor)
         end = start + timedelta(days=6)
-        chunks = [
-            (start + timedelta(days=i), DAY_SHORT[(start + timedelta(days=i)).weekday()],
-             start + timedelta(days=i), start + timedelta(days=i))
-            for i in range(7)
-        ]
+        chunks = []
+        for i in range(7):
+            d = start + timedelta(days=i)
+            chunks.append(
+                {
+                    "key": _iso(d),
+                    "name": f"{DAY_NAMES[d.weekday()]} {d.day}",
+                    "label": DAY_SHORT[d.weekday()],
+                    "start": d,
+                    "end": d,
+                }
+            )
         if start.month == end.month:
             label = f"{start.day} – {end.day} {MONTH_NAMES[end.month - 1]} {end.year}"
             short = f"{start.day} – {end.day} {MONTH_SHORT[end.month - 1]} {end.year}"
@@ -191,12 +243,26 @@ def _chunks(period: str, anchor: date) -> tuple[date, date, list[tuple], str, st
     if period == "month":
         start = anchor.replace(day=1)
         end = month_end(anchor.year, anchor.month)
-        chunks = []
+        chunks: list[dict] = []
         cursor = start
         while cursor <= end:
             chunk_end = min(_week_start(cursor) + timedelta(days=6), end)
             label = f"{cursor.day}–{chunk_end.day}" if cursor != chunk_end else f"{cursor.day}"
-            chunks.append((cursor, label, cursor, chunk_end))
+            if cursor == chunk_end:
+                name = f"{cursor.day} {MONTH_SHORT[chunk_end.month - 1]}"
+            else:
+                name = (
+                    f"{cursor.day} – {chunk_end.day} {MONTH_SHORT[chunk_end.month - 1]}"
+                )
+            chunks.append(
+                {
+                    "key": _iso(cursor),
+                    "name": name,
+                    "label": label,
+                    "start": cursor,
+                    "end": chunk_end,
+                }
+            )
             cursor = chunk_end + timedelta(days=1)
         label = f"{MONTH_NAMES[start.month - 1]} {start.year}"
         return start, end, chunks, label, label
@@ -204,7 +270,13 @@ def _chunks(period: str, anchor: date) -> tuple[date, date, list[tuple], str, st
     start = date(anchor.year, 1, 1)
     end = date(anchor.year, 12, 31)
     chunks = [
-        (date(anchor.year, m, 1), MONTH_SHORT[m - 1], date(anchor.year, m, 1), month_end(anchor.year, m))
+        {
+            "key": _iso(date(anchor.year, m, 1)),
+            "name": MONTH_NAMES[m - 1],
+            "label": MONTH_SHORT[m - 1],
+            "start": date(anchor.year, m, 1),
+            "end": month_end(anchor.year, m),
+        }
         for m in range(1, 13)
     ]
     return start, end, chunks, str(anchor.year), str(anchor.year)
@@ -214,30 +286,55 @@ async def build_report(sid, period: str, anchor: date) -> dict:
     start, end, chunks, label, short = _chunks(period, anchor)
     start_str, end_str = _iso(start), _iso(end)
     rows, expenses = await _rows(sid, start_str, end_str)
+    entries = await _expense_entries(sid, start_str, end_str)
     now = today()
 
     bars: list[dict] = []
-    for key, chunk_label, chunk_start, chunk_end in chunks:
-        if chunk_start > now:
-            bars.append({"key": _iso(key), "label": chunk_label, "net": None})
+    for chunk in chunks:
+        if chunk["start"] > now:
+            # Kipindi ambacho hakijafika: zote null (app inaandika "—").
+            bars.append(
+                {
+                    "key": chunk["key"],
+                    "label": chunk["label"],
+                    "name": chunk["name"],
+                    "sales": None,
+                    "capital": None,
+                    "expenses": None,
+                    "net": None,
+                }
+            )
             continue
-        a, b = _iso(chunk_start), _iso(chunk_end)
+        a, b = _iso(chunk["start"]), _iso(chunk["end"])
         part = [r for r in rows if a <= r[0] <= b]
+        # Kipindi kilichopita bila mauzo: 0 (si null).
+        part_summary = _summary(part, _expenses_between(expenses, a, b))
         bars.append(
             {
-                "key": _iso(key),
-                "label": chunk_label,
-                "net": _summary(part, _expenses_between(expenses, a, b))["net"],
+                "key": chunk["key"],
+                "label": chunk["label"],
+                "name": chunk["name"],
+                "sales": part_summary["sales"],
+                "capital": part_summary["capital"],
+                "expenses": part_summary["expenses"],
+                "net": part_summary["net"],
             }
         )
 
     products = _by_name(rows)
     top = [_brief(p) for p in products[:5]]
     low = [_brief(p) for p in sorted(products[5:], key=lambda p: (p["qty"], p["sales"]))[:3]]
-    summary = _summary(rows, sum(expenses.values()))
-    summary["net"] = sum(bar["net"] for bar in bars if bar["net"] is not None)
 
-    return {
+    # Hesabu zilingane daima (4.5): bars = summary, na bidhaa = sales - capital.
+    summary = {
+        "sales": sum(bar["sales"] or 0 for bar in bars),
+        "capital": sum(bar["capital"] or 0 for bar in bars),
+        "expenses": sum(bar["expenses"] or 0 for bar in bars),
+    }
+    summary["product_profit"] = summary["sales"] - summary["capital"]
+    summary["net"] = summary["sales"] - summary["capital"] - summary["expenses"]
+
+    report = {
         "period": period,
         "start": start_str,
         "end": end_str,
@@ -251,3 +348,11 @@ async def build_report(sid, period: str, anchor: date) -> dict:
         "low": low,
         "unsold": await _unsold(sid, rows),
     }
+    if period == "week":
+        report["expense_list"] = [
+            {"date": day, "name": name or "Gharama", "amount": amount}
+            for day, name, amount in entries
+        ]
+    else:
+        report["expense_groups"] = _expense_groups(entries)
+    return report

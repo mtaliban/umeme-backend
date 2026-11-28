@@ -21,8 +21,12 @@
         -Server
     }
 
-    # Compression
-    encode gzip zstd
+    # Gzip inafanywa na app (GZipMiddleware) — hapa haifanywi mara mbili.
+
+    # Picha ya daftari: hadi 8 MB, na AI inaweza kuchukua sekunde 5-30.
+    request_body {
+        max_size 8MB
+    }
 
     # Cache uploaded media
     @media path /media/*
@@ -31,7 +35,11 @@
     # API → backend (Caddy inaondoa /api ili routes za app zifikike)
     handle /api/* {
         uri strip_prefix /api
-        reverse_proxy backend:8000
+        reverse_proxy backend:8000 {
+            transport http {
+                response_header_timeout 90s
+            }
+        }
     }
 
     # Media files – block /media/private/*
@@ -47,6 +55,10 @@
 
     # API nyingine zote (mf. /health, /auth/pin, /home) → backend
     handle {
-        reverse_proxy backend:8000
+        reverse_proxy backend:8000 {
+            transport http {
+                response_header_timeout 90s
+            }
+        }
     }
 }

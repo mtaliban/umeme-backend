@@ -64,7 +64,8 @@ def parse_day(value: str | None) -> date:
     try:
         return date.fromisoformat(str(value))
     except ValueError:
-        raise HTTPException(400, "Tarehe si sahihi: tumia YYYY-MM-DD")
+        # Sehemu 1 ya sheria za jumla: tarehe isiyo sahihi ni 422.
+        raise HTTPException(422, "Tarehe si sahihi")
 
 
 def month_end(year: int, month: int) -> date:

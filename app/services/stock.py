@@ -143,7 +143,8 @@ async def take_stock(
     """Punguza stock kadri inavyopatikana (haishuki chini ya 0).
 
     Hurudisha (stock_taken, qty_after): stock ikiwa pungufu mauzo yanakubaliwa
-    na kinachopatikana tu ndicho kinachotolewa kwenye stock.
+    na kinachopatikana tu ndicho kinachotolewa kwenye stock. Aina iliyofutwa
+    (sehemu 1.4) haigusiwi na haileti kosa — hurudisha (0, 0).
     """
     pid = oid(product_id, "Bidhaa")
     vid = oid(variant_id, "Aina")
@@ -184,8 +185,15 @@ async def return_stock(
 ) -> int:
     pid = oid(product_id, "Bidhaa")
     vid = oid(variant_id, "Aina")
+    # Sehemu 1.4: aina/bidhaa iliyofutwa — ruka kugusa stock, hakuna kosa na
+    # hakuna mwendo wa stock unaoandikwa.
+    exists = await db.products.find_one(
+        {"_id": pid, "shop_id": sid, "variants._id": vid}, {"_id": 1}, session=session
+    )
+    if not exists:
+        return 0
     await db.products.update_one(
-        {"_id": pid, "shop_id": sid},
+        {"_id": pid, "shop_id": sid, "variants._id": vid},
         {"$inc": {"variants.$[v].qty": int(qty)}, "$set": {"updated_at": now()}},
         array_filters=[{"v._id": vid}],
         session=session,
@@ -195,6 +203,41 @@ async def return_stock(
         sid, pid, vid, name, int(qty), qty_after, buying, reason, line_id, day, session=session
     )
     return qty_after
+
+
+async def stock_list_payload(sid) -> dict:
+    """K0 — ukurasa wa Stock (orodha + jumla)."""
+    out: list[dict] = []
+    total_qty = 0
+    total_capital = 0
+    total_variants = 0
+    async for product in db.products.find({"shop_id": sid}):
+        variants = product.get("variants", [])
+        qty = sum(max(int(v.get("qty", 0)), 0) for v in variants)
+        capital = sum(max(int(v.get("qty", 0)), 0) * int(v.get("buying", 0)) for v in variants)
+        out.append(
+            {
+                "id": str(product["_id"]),
+                "name": product["name"],
+                "has_variants": bool(product.get("has_types", True)),
+                "variants": len(variants),
+                "qty": qty,
+                "capital": capital,
+            }
+        )
+        total_qty += qty
+        total_capital += capital
+        total_variants += len(variants)
+    out.sort(key=lambda p: p["name"].lower())
+    return {
+        "summary": {
+            "products": len(out),
+            "variants": total_variants,
+            "qty": total_qty,
+            "capital": total_capital,
+        },
+        "products": out,
+    }
 
 
 async def check_stock(sid, name: str, qty: int) -> None:

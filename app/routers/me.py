@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import current_shop_id
+from ..config import settings
 from ..db import db
 
 router = APIRouter(tags=["me"])
@@ -18,4 +19,6 @@ async def me(sid=Depends(current_shop_id)):
         "name": shop.get("name", ""),
         "phone": shop.get("phone", ""),
         "email": shop.get("email", ""),
+        # Jina la muuzaji linaloonekana chini ya risiti.
+        "signature_name": shop.get("signature_name") or settings.signature_name,
     }

@@ -135,11 +135,13 @@ async def test_create_receipt_contract(client, headers):
         "time",
         "customer",
         "items",
+        "total_qty",
         "gross",
         "discount",
         "paid",
         "shop",
     }
+    assert receipt["total_qty"] == 3
     assert receipt["number"] == "0001"
     assert receipt["date"] == DAY
     assert re.match(r"^\d{2}:\d{2}$", receipt["time"])
@@ -148,6 +150,7 @@ async def test_create_receipt_contract(client, headers):
     assert receipt["paid"] == 42000
     assert receipt["items"][0] == {
         "name": "Abaya nyeusi",
+        "category": "Abaya nyeusi",
         "qty": 2,
         "price": 11000,
         "discount": 1000,
@@ -157,11 +160,13 @@ async def test_create_receipt_contract(client, headers):
         "name": "Said Hamad",
         "phone": "0712445900",
         "location": "",
+        "address": "",
     }
     assert receipt["shop"] == {
         "name": "UMMU AYMAN OUTFITS",
         "phone": "0621 340 044",
         "email": "kambilatifah@gmail.com",
+        "signature_name": "Ummu Ayman",
     }
 
     assert await qty_of(abaya) == 3
@@ -174,10 +179,15 @@ async def test_create_receipt_contract(client, headers):
     assert today_list["receipts"][0] == {
         "id": receipt["id"],
         "number": "0001",
+        "date": DAY,
         "customer": "Said Hamad",
         "location": "",
         "time": receipt["time"],
+        "total_qty": 3,
+        "gross": 44000,
+        "discount": 2000,
         "paid": 42000,
+        "shop": receipt["shop"],
     }
 
 
@@ -284,7 +294,12 @@ async def test_empty_customer_shows_mteja(client, headers):
         headers=headers,
     )
     assert res.status_code == 201, res.text
-    assert res.json()["customer"] == {"name": "", "phone": "", "location": ""}
+    assert res.json()["customer"] == {
+        "name": "",
+        "phone": "",
+        "location": "",
+        "address": "",
+    }
     data = (await client.get("/receipts", params={"date": DAY}, headers=headers)).json()
     assert data["receipts"][0]["customer"] == "Mteja"
 
@@ -312,7 +327,11 @@ async def test_history_search_and_labels(client, headers):
     assert data["days"][1]["label"].startswith("JANA · ")
     assert data["days"][2]["label"].startswith("JUMATANO 18 NOV")
     assert data["next_before"] is None
-    assert all(set(r) == {"id", "number", "customer", "time", "paid"} for d in data["days"] for r in d["receipts"])
+    assert all(
+        {"id", "number", "date", "customer", "time", "paid"} <= set(r)
+        for d in data["days"]
+        for r in d["receipts"]
+    )
 
     by_name = (await client.get("/receipts/history", params={"q": "hamad"}, headers=headers)).json()
     nums = [r["number"] for d in by_name["days"] for r in d["receipts"]]
