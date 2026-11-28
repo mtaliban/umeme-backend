@@ -126,10 +126,33 @@ jobs:
               exit 1
             fi
             echo "::notice title=Disk::$(df -h / | tail -1 | tr -s ' ')"
-            # --no-deps: mongo ina data yake na iko healthy — kuicreate upya kunafeli (exit 14, lock ya dbpath).
+            # Anzisha backend + caddy (mongo haiguswi — iko healthy na ina data yake).
             if ! sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --no-deps backend caddy >/tmp/up.log 2>&1; then
-              echo "::error title=up -d imefeli::$(tr '\n' ' ' < /tmp/up.log | tail -c 900)"
+              echo "::error title=up -d imefeli::$(tr '\n' ' ' < /tmp/up.log | tail -c 800)"
             fi
+
+            backend_ok() {
+              sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env exec -T backend \
+                curl -fsS -m 3 http://localhost:8000/health >/dev/null 2>&1
+            }
+            healthy=0
+            for _ in $(seq 1 10); do
+              backend_ok && { healthy=1; break; }
+              sleep 5
+            done
+            # Backend haijajibu? Mara nyingi ni mtandao umegawanyika (mongo/caddy za zamani,
+            # backend mpya) → jenga containers upya; data ya mongo inabaki kwenye volume.
+            if [ "$healthy" -ne 1 ]; then
+              echo "::warning title=Repair::Backend haijajibu — nafanya down/up ili kuunganisha mtandao upya"
+              sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env down --remove-orphans || true
+              sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d backend caddy mongo >/tmp/up2.log 2>&1 \
+                || echo "::error title=up -d (repair) imefeli::$(tr '\n' ' ' < /tmp/up2.log | tail -c 800)"
+              for _ in $(seq 1 10); do
+                backend_ok && { healthy=1; break; }
+                sleep 5
+              done
+            fi
+            echo "::notice title=Health::$healthy"
             echo "::notice title=Containers::$(sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env ps -a 2>&1 | tr '\n' ' ' | tail -c 700)"
 
             # Subiri sekunde 45 backend ijipange, kisha onyesha hali na logs.
@@ -142,7 +165,9 @@ jobs:
             # Logs za backend — kwenye console NA kama annotation (ili zionekane bila login).
             BLOG=$(sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env logs --tail=40 backend 2>&1 | tr '\n' ' ' | tail -c 1200)
             echo "$BLOG"
-            echo "::error title=Logs za backend::$BLOG"
+            if [ "$healthy" -ne 1 ]; then
+              echo "::error title=Logs za backend::$BLOG"
+            fi
 
             # Fail if backend is not running
             sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env ps backend | grep -q "running\|Up"
