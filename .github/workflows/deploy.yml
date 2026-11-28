@@ -125,7 +125,11 @@ jobs:
               echo "::error title=Pull ya image imefeli::$(tr '\n' ' ' < /tmp/pull.log | tail -c 800)"
               exit 1
             fi
-            sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d backend caddy mongo || true
+            echo "::notice title=Disk::$(df -h / | tail -1 | tr -s ' ')"
+            if ! sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d backend caddy mongo >/tmp/up.log 2>&1; then
+              echo "::error title=up -d imefeli::$(tr '\n' ' ' < /tmp/up.log | tail -c 900)"
+            fi
+            echo "::notice title=Containers::$(sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env ps -a 2>&1 | tr '\n' ' ' | tail -c 700)"
 
             # Subiri sekunde 45 backend ijipange, kisha onyesha hali na logs.
             for _ in $(seq 1 9); do
