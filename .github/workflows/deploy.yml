@@ -127,8 +127,17 @@ jobs:
             fi
             sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d backend caddy mongo || true
 
-            # Show backend logs if unhealthy
-            sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env logs --tail=50 backend
+            # Subiri sekunde 45 backend ijipange, kisha onyesha hali na logs.
+            for _ in $(seq 1 9); do
+              state=$(sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env ps backend | tail -n +3 | head -1)
+              echo "backend: $state"
+              echo "$state" | grep -q "Up" && break
+              sleep 5
+            done
+            # Logs za backend — kwenye console NA kama annotation (ili zionekane bila login).
+            BLOG=$(sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env logs --tail=40 backend 2>&1 | tr '\n' ' ' | tail -c 1200)
+            echo "$BLOG"
+            echo "::error title=Logs za backend::$BLOG"
 
             # Fail if backend is not running
             sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env ps backend | grep -q "running\|Up"
