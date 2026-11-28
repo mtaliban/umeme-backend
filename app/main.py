@@ -10,7 +10,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from starlette.middleware.gzip import GZipMiddleware
 
-from . import jobs
+from . import api_docs, jobs
 from .db import create_indexes, db
 from .middleware import TimingMiddleware
 from .routers import (
@@ -145,6 +145,8 @@ def custom_openapi():
             for operation in schema["paths"][path_key].values():
                 if isinstance(operation, dict):
                     operation["security"] = []
+    # Models za majibu (DaySheet, risiti, ripoti, stock) zionekane kwenye /docs.
+    schema = api_docs.attach(schema)
     app.openapi_schema = schema
     return schema
 
