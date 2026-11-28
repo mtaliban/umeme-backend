@@ -115,6 +115,10 @@ jobs:
             printf 'CLAUDE_API_KEY=%s\n' "$CLAUDE_API_KEY" >> deploy/.env
             printf 'SIGNATURE_NAME=%s\n' "${SIGNATURE_NAME:-Ummu Ayman}" >> deploy/.env
 
+            # Ondoa images zisizotumika kwanza — EC2 ndogo hujaa images za zamani
+            # na pull hufeli kwa "no space left on device".
+            sudo docker image prune -af --filter "until=1h" || true
+
             # Pull new image and restart backend + caddy.
             echo "::notice title=Image::ghcr.io/$GH_OWNER/umeme-backend:$IMAGE_TAG"
             if ! sudo docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env pull backend >/tmp/pull.log 2>&1; then
